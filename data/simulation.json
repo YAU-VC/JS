@@ -152,6 +152,28 @@
         "screenshotUrl": "screenshots/3d26.png",
         "createdAt": "2026-2-4",
         "updatedAt": "2026-2-4"
+    },
+    {
+        "id": "Energy",
+        "category": {
+            "en-US": "JS",
+            "zh-HK": "JS"
+        },
+        "title": {
+            "en-US": "Energy Lab"
+            "zh-HK": "Energy Lab"
+        },
+        "description": {
+            "en-US": "Energy Lab",
+            "zh-HK": "Energy Lab"
+        },
+        "contributors": [
+            "LAW HO YI"
+        ],
+        "simulationUrl": "simulations/JS/3A17.html",
+        "screenshotUrl": "screenshots/3A17.png",
+        "createdAt": "2026-2-4",
+        "updatedAt": "2026-2-4"
     }
 
 
