@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Valtorta College: Interstellar Olympics</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Roboto:wght@300;400;700&display=swap');
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            overflow: hidden;
+            background-color: #0b0d17;
+        }
+
+        h1, h2, h3, .sci-font {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        /* Custom Slider */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 24px;
+            width: 24px;
+            border-radius: 50%;
+            background: #38bdf8;
+            border: 2px solid white;
+            cursor: pointer;
+            margin-top: -10px;
+            box-shadow: 0 0 15px #38bdf8;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #334155;
+            border-radius: 2px;
+        }
+
+        .planet-btn {
+            transition: all 0.3s ease;
+        }
+        .planet-btn.active {
+            border-color: #38bdf8;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
+            transform: scale(1.05);
+        }
+
+        /* Log styling */
+        .log-entry {
+            border-left: 2px solid #38bdf8;
+            padding-left: 10px;
+            margin-bottom: 8px;
+            opacity: 0;
+            animation: fadeIn 0.5s forwards;
+        }
+        @keyframes fadeIn { to { opacity: 1; } }
+
+        /* Mission Pass Styling */
+        .mission-item {
+            transition: all 0.3s;
+        }
+        .mission-done {
+            color: #4ade80; /* green-400 */
+            text-shadow: 0 0 10px rgba(74, 222, 128, 0.5);
+        }
+        .mission-pending {
+            color: #94a3b8; /* slate-400 */
+            opacity: 0.5;
+        }
+        
+        /* Flash animation for death */
+        @keyframes flashRed {
+            0% { background-color: rgba(239, 68, 68, 0.5); }
+            100% { background-color: transparent; }
+        }
+        .flash {
+            animation: flashRed 0.5s ease-out;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col md:flex-row text-white">
+
+    <!-- Control Panel (Left) -->
+    <div class="w-full md:w-1/3 h-1/3 md:h-full bg-slate-900/90 border-r border-slate-700 p-6 flex flex-col gap-4 z-20 overflow-y-auto">
+        <div class="mb-2">
+            <div class="text-[10px] text-sky-300 font-bold uppercase tracking-widest mb-1">Valtorta College</div>
+            <h1 class="text-2xl font-bold text-sky-400 tracking-wider">INTERSTELLAR <br><span class="text-white">OLYMPICS</span></h1>
+            <p class="text-xs text-slate-400 mt-1">S2 Force & Motion: Gravity Lab</p>
+        </div>
+
+        <!-- Planet Selector -->
+        <div class="space-y-3">
+            <h2 class="text-sm font-bold text-slate-300 uppercase tracking-widest">Select Location</h2>
+            <div class="grid grid-cols-3 gap-2">
+                <button onclick="changePlanet('pluto')" id="btn-pluto" class="planet-btn bg-slate-800 p-2 rounded-xl border-2 border-slate-600 flex flex-col items-center gap-1 hover:bg-slate-700">
+                    <div class="w-5 h-5 rounded-full bg-stone-300"></div>
+                    <span class="text-[10px] font-bold">Pluto</span>
+                    <span class="text-[9px] text-slate-400">g=0.6</span>
+                </button>
+                <button onclick="changePlanet('moon')" id="btn-moon" class="planet-btn bg-slate-800 p-2 rounded-xl border-2 border-slate-600 flex flex-col items-center gap-1 hover:bg-slate-700">
+                    <div class="w-5 h-5 rounded-full bg-gray-400"></div>
+                    <span class="text-[10px] font-bold">Moon</span>
+                    <span class="text-[9px] text-slate-400">g=1.6</span>
+                </button>
+                <button onclick="changePlanet('mars')" id="btn-mars" class="planet-btn bg-slate-800 p-2 rounded-xl border-2 border-slate-600 flex flex-col items-center gap-1 hover:bg-slate-700">
+                    <div class="w-5 h-5 rounded-full bg-red-500"></div>
+                    <span class="text-[10px] font-bold">Mars</span>
+                    <span class="text-[9px] text-slate-400">g=3.7</span>
+                </button>
+                <button onclick="changePlanet('earth')" id="btn-earth" class="planet-btn active bg-slate-800 p-2 rounded-xl border-2 border-slate-600 flex flex-col items-center gap-1 hover:bg-slate-700">
+                    <div class="w-5 h-5 rounded-full bg-gradient-to-br from-blue-500 to-green-500"></div>
+                    <span class="text-[10px] font-bold">Earth</span>
+                    <span class="text-[9px] text-slate-400">g=9.8</span>
+                </button>
+                <button onclick="changePlanet('neptune')" id="btn-neptune" class="planet-btn bg-slate-800 p-2 rounded-xl border-2 border-slate-600 flex flex-col items-center gap-1 hover:bg-slate-700">
+                    <div class="w-5 h-5 rounded-full bg-blue-700 border border-blue-400"></div>
+                    <span class="text-[10px] font-bold">Neptune</span>
+                    <span class="text-[9px] text-slate-400">g=11.2</span>
+                </button>
+                <button onclick="changePlanet('jupiter')" id="btn-jupiter" class="planet-btn bg-slate-800 p-2 rounded-xl border-2 border-slate-600 flex flex-col items-center gap-1 hover:bg-slate-700">
+                    <div class="w-5 h-5 rounded-full bg-orange-300 border border-orange-600"></div>
+                    <span class="text-[10px] font-bold">Jupiter</span>
+                    <span class="text-[9px] text-slate-400">g=24.8</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Jump Controls -->
+        <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+            <div class="flex justify-between items-center mb-2">
+                <h2 class="text-sm font-bold text-slate-300">JUMP FORCE (Newton)</h2>
+                <span id="force-display" class="text-xs font-mono text-sky-400">500 N</span>
+            </div>
+            <input type="range" min="200" max="2000" value="500" step="10" id="force-slider" oninput="updateForce(this.value)">
+            <p class="text-[10px] text-slate-500 mt-2">Adjust force to reach the Cake but avoid the Trap!</p>
+        </div>
+
+        <!-- Action Button -->
+        <button onclick="jump()" id="jump-btn" class="w-full py-4 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-black rounded-xl shadow-lg transform active:scale-95 transition-all text-lg tracking-widest border border-white/20">
+            INITIATE JUMP
+        </button>
+
+        <!-- Stats Panel -->
+        <div class="bg-slate-800 p-4 rounded-xl border border-slate-600">
+            <h3 class="text-xs font-bold text-slate-400 uppercase mb-2">Telemetry Data (Mass: 60kg)</h3>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <div class="text-[10px] text-slate-500">Weight (Force)</div>
+                    <div class="text-xl font-bold text-white sci-font" id="weight-display">588 N</div>
+                </div>
+                <div>
+                    <div class="text-[10px] text-slate-500">Max Height</div>
+                    <div class="text-xl font-bold text-sky-400 sci-font" id="height-display">0.00 m</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Log Panel -->
+        <div class="mt-2 flex-grow flex flex-col overflow-hidden">
+            <h3 class="text-xs font-bold text-slate-400 uppercase mb-2">Mission Log & Analysis</h3>
+            <div id="observation-log" class="bg-black/40 rounded-lg p-3 text-xs text-slate-300 overflow-y-auto h-32 md:h-auto font-mono">
+                <p class="text-slate-500 italic">Ready for launch...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Simulation Canvas (Right) -->
+    <div id="sim-container" class="relative w-full md:w-2/3 h-2/3 md:h-full bg-black overflow-hidden group">
+        
+        <!-- Mission Pass HUD (Top Right Corner) -->
+        <div class="absolute top-4 right-4 z-10 w-48 bg-black/60 backdrop-blur-md border border-sky-500/30 rounded-lg p-3 shadow-lg transform transition-transform hover:scale-105">
+            <div class="flex justify-between items-center mb-2 border-b border-white/10 pb-1">
+                <h3 class="text-xs font-bold text-sky-400 uppercase tracking-widest">Mission Pass</h3>
+                <span id="mission-count" class="text-xs font-mono text-white">0/6</span>
+            </div>
+            <div class="grid grid-cols-2 gap-y-1 gap-x-2 text-[10px] font-mono" id="mission-list">
+                <!-- Generated by JS -->
+            </div>
+            <div id="mission-complete-msg" class="hidden mt-2 text-center text-xs font-bold text-yellow-400 animate-pulse">
+                ★ ALL SYSTEMS CLEARED ★
+            </div>
+        </div>
+
+        <canvas id="simCanvas" class="block w-full h-full"></canvas>
+
+        <!-- Dynamic Feedback Overlay -->
+        <div id="feedback" class="absolute top-20 left-1/2 transform -translate-x-1/2 bg-black/50 backdrop-blur px-6 py-2 rounded-full border border-white/10 opacity-0 transition-opacity duration-500 pointer-events-none z-20">
+            <span class="text-sm font-bold text-white" id="feedback-text">Gravity Check</span>
+        </div>
+
+        <!-- Height Markers (Visual Guide) -->
+        <div class="absolute right-4 bottom-20 flex flex-col text-white/30 text-xs font-mono text-right pointer-events-none gap-[90px]">
+            <span>10m -</span>
+            <span>8m -</span>
+            <span>6m -</span>
+            <span>4m -</span>
+            <span>2m -</span>
+            <span>0m -</span>
+        </div>
+    </div>
+
+<script>
+    // --- Physics & Game Configuration ---
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Calculated Heights based on g: Cake ~ 12.5/g, Trap ~ 18/g
+    const PLANETS = {
+        'pluto':   { name: 'Pluto',   g: 0.62,  cakeH: 20.0, trapH: 29.0, color: '#e7e5e4', sky: ['#000000', '#1c1917'] },
+        'moon':    { name: 'Moon',    g: 1.62,  cakeH: 7.7, trapH: 11.1, color: '#e5e7eb', sky: ['#0f172a', '#1f2937'] },
+        'mars':    { name: 'Mars',    g: 3.71,  cakeH: 3.3, trapH: 4.8,  color: '#ef4444', sky: ['#7f1d1d', '#fca5a5'] },
+        'earth':   { name: 'Earth',   g: 9.81,  cakeH: 1.3, trapH: 1.8,  color: '#22c55e', sky: ['#38bdf8', '#bae6fd'] },
+        'neptune': { name: 'Neptune', g: 11.15, cakeH: 1.1, trapH: 1.6,  color: '#1d4ed8', sky: ['#172554', '#1e40af'] },
+        'jupiter': { name: 'Jupiter', g: 24.79, cakeH: 0.5, trapH: 0.7,  color: '#d97706', sky: ['#451a03', '#92400e'] }
+    };
+
+    let state = {
+        currentPlanet: 'earth',
+        mass: 60, // kg
+        jumpForce: 500, // Newtons
+        
+        // Physics
+        y: 0,
+        vy: 0,
+        isJumping: false,
+        maxHeight: 0,
+        
+        // Game State
+        gotCake: false,
+        dead: false,
+        
+        // Mission Progress (Planet Key -> Boolean)
+        missions: {}
+    };
+
+    // Initialize Missions
+    Object.keys(PLANETS).forEach(k => state.missions[k] = false);
+
+    const PPM = 50; 
+    const GROUND_HEIGHT = 80;
+
+    // --- Core Functions ---
+
+    function init() {
+        resize();
+        window.addEventListener('resize', resize);
+        updateTelemetry();
+        renderMissionList();
+        requestAnimationFrame(loop);
+    }
+
+    function resize() {
+        width = canvas.width = canvas.offsetWidth;
+        height = canvas.height = canvas.offsetHeight;
+    }
+
+    window.changePlanet = (planetKey) => {
+        state.currentPlanet = planetKey;
+        
+        // UI Updates
+        document.querySelectorAll('.planet-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(`btn-${planetKey}`).classList.add('active');
+
+        // Reset Physics
+        resetState();
+        
+        updateTelemetry();
+        showFeedback(`Arrived at ${PLANETS[planetKey].name}`);
+        addLog(`Transferred to ${PLANETS[planetKey].name}. Target Cake: ${PLANETS[planetKey].cakeH}m`);
+    }
+
+    function resetState() {
+        state.y = 0;
+        state.vy = 0;
+        state.isJumping = false;
+        state.maxHeight = 0;
+        state.gotCake = false;
+        state.dead = false;
+        document.getElementById('height-display').innerText = "0.00 m";
+    }
+
+    window.updateForce = (val) => {
+        state.jumpForce = parseInt(val);
+        document.getElementById('force-display').innerText = `${val} N`;
+    }
+
+    window.jump = () => {
+        // Prevent jump only if actively jumping or currently dead (waiting for respawn)
+        if (state.isJumping || state.dead) return;
+
+        resetState(); // Clear previous jump flags
+        
+        const dt = 0.2; // Push duration
+        const netForce = state.jumpForce; 
+        const acceleration = netForce / state.mass;
+        const launchVelocity = acceleration * dt;
+
+        state.vy = launchVelocity;
+        state.isJumping = true;
+        
+        analyzeJump(launchVelocity);
+    }
+
+    // --- Logic ---
+
+    function checkCollisions() {
+        const p = PLANETS[state.currentPlanet];
+        
+        // --- NEW: If Mission Complete, no traps or cakes ---
+        if (state.missions[state.currentPlanet]) return;
+
+        // Trap Collision
+        if (state.y >= p.trapH - 0.2) {
+            die();
+        }
+
+        // Cake Collision
+        // If we reach cake height AND haven't hit trap
+        if (!state.dead && !state.gotCake && state.y >= p.cakeH - 0.2 && state.y < p.trapH) {
+            state.gotCake = true;
+            showFeedback("CAKE ACQUIRED!");
+        }
+    }
+
+    function die() {
+        state.dead = true;
+        state.isJumping = false;
+        state.vy = 0;
+        state.y = 0; // Reset position immediately
+        
+        // Visual Feedback
+        document.getElementById('sim-container').classList.add('flash');
+        setTimeout(() => document.getElementById('sim-container').classList.remove('flash'), 500);
+        
+        showFeedback("TRAP HIT! RESETTING...");
+        addLog(`FAILED: Hit trap at ${PLANETS[state.currentPlanet].trapH}m. Too much force!`);
+        
+        // --- NEW: Auto Respawn Logic ---
+        setTimeout(() => {
+            state.dead = false;
+            showFeedback("READY");
+        }, 1500); // 1.5 seconds delay before player can jump again
+    }
+
+    function land() {
+        if (state.dead) return; // Already handled
+
+        state.y = 0;
+        state.vy = 0;
+        state.isJumping = false;
+
+        if (state.gotCake) {
+            // Mission Logic
+            if (!state.missions[state.currentPlanet]) {
+                state.missions[state.currentPlanet] = true;
+                renderMissionList();
+                addLog(`SUCCESS: Cake secured on ${PLANETS[state.currentPlanet].name}. Mission Pass Updated.`);
+                
+                // Check win condition
+                const allDone = Object.values(state.missions).every(v => v === true);
+                if (allDone) {
+                    document.getElementById('mission-complete-msg').classList.remove('hidden');
+                    addLog("★ MISSION COMPLETE: Data collected from all worlds!");
+                    showFeedback("ALL MISSIONS COMPLETE!");
+                }
+            } else {
+                 addLog(`Safe landing. Cake already collected for this planet.`);
+            }
+        } else {
+            // Only log missed cake if mission not done yet
+            if (!state.missions[state.currentPlanet]) {
+                addLog(`Landing confirmed. Missed the cake (Height: ${PLANETS[state.currentPlanet].cakeH}m).`);
+            } else {
+                addLog(`Landing confirmed. Free jump mode.`);
+            }
+        }
+    }
+
+    // --- UI Helpers ---
+
+    function renderMissionList() {
+        const list = document.getElementById('mission-list');
+        list.innerHTML = '';
+        let count = 0;
+        Object.keys(PLANETS).forEach(key => {
+            const p = PLANETS[key];
+            const isDone = state.missions[key];
+            if (isDone) count++;
+            const div = document.createElement('div');
+            div.className = `mission-item flex items-center gap-2 ${isDone ? 'mission-done' : 'mission-pending'}`;
+            const icon = isDone ? '✓' : '○';
+            div.innerHTML = `<span>${icon}</span> <span>${p.name}</span>`;
+            list.appendChild(div);
+        });
+        document.getElementById('mission-count').innerText = `${count}/6`;
+    }
+
+    function analyzeJump(velocity) {
+        const p = PLANETS[state.currentPlanet];
+        const predictedHeight = (velocity * velocity) / (2 * p.g);
+        let observation = `Jump Force: ${state.jumpForce}N. Predicted Height: ${predictedHeight.toFixed(2)}m.`;
+        addLog(`> ${p.name}: ${observation}`);
+    }
+
+    function addLog(msg) {
+        const log = document.getElementById('observation-log');
+        const entry = document.createElement('div');
+        entry.className = "log-entry";
+        entry.innerText = msg;
+        log.prepend(entry);
+    }
+
+    function updateTelemetry() {
+        const p = PLANETS[state.currentPlanet];
+        const weight = (state.mass * p.g).toFixed(0);
+        document.getElementById('weight-display').innerText = `${weight} N`;
+    }
+
+    function showFeedback(text) {
+        const el = document.getElementById('feedback');
+        const txt = document.getElementById('feedback-text');
+        txt.innerText = text;
+        el.style.opacity = '1';
+        setTimeout(() => el.style.opacity = '0', 2000);
+    }
+
+    // --- Physics Loop ---
+
+    function updatePhysics(dt) {
+        if (!state.isJumping) return;
+
+        const g = PLANETS[state.currentPlanet].g;
+        state.vy -= g * dt;
+        state.y += state.vy * dt;
+
+        // Track Max Height
+        if (state.y > state.maxHeight) {
+            state.maxHeight = state.y;
+            document.getElementById('height-display').innerText = state.maxHeight.toFixed(2) + " m";
+        }
+
+        // Check Items
+        checkCollisions();
+
+        // Ground Collision
+        if (state.y <= 0 && state.isJumping) {
+            land();
+        }
+    }
+
+    // --- Rendering ---
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const p = PLANETS[state.currentPlanet];
+        const cx = canvas.width / 2;
+        const groundY = canvas.height - GROUND_HEIGHT;
+
+        // 1. Sky
+        const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        grad.addColorStop(0, p.sky[0]);
+        grad.addColorStop(1, p.sky[1]);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Stars
+        if (['moon', 'jupiter', 'pluto'].includes(state.currentPlanet)) {
+            ctx.fillStyle = 'white';
+            for (let i=0; i<50; i++) {
+                const x = ((i * 137) % canvas.width);
+                const y = ((i * 53) % (canvas.height - 100));
+                ctx.globalAlpha = Math.random() * 0.5 + 0.3;
+                ctx.beginPath();
+                ctx.arc(x, y, (i%3)*0.5 + 1, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1.0;
+        }
+
+        // 2. Planet Surface
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.ellipse(cx, canvas.height + 200, canvas.width, 300, 0, 0, Math.PI*2);
+        ctx.fill();
+
+        // 3. Ruler & Items
+        ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+        ctx.lineWidth = 1;
+        
+        // --- NEW: Check if Mission Complete for this planet ---
+        if (!state.missions[state.currentPlanet]) {
+            // Draw Trap & Cake only if mission NOT complete
+            const cakeY = groundY - (p.cakeH * PPM);
+            const trapY = groundY - (p.trapH * PPM);
+
+            // Cake
+            if (!state.gotCake) { // Hide cake if collected in this jump
+                ctx.font = "24px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText("🎂", cx + 60, cakeY + 10);
+                // Height Line
+                ctx.beginPath();
+                ctx.strokeStyle = "rgba(0, 255, 0, 0.5)";
+                ctx.moveTo(cx - 100, cakeY);
+                ctx.lineTo(cx + 100, cakeY);
+                ctx.stroke();
+                ctx.fillStyle = "rgba(0, 255, 0, 0.7)";
+                ctx.font = "10px monospace";
+                ctx.fillText(`CAKE: ${p.cakeH}m`, cx + 120, cakeY + 5);
+            }
+
+            // Trap
+            ctx.font = "24px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("⚡", cx + 60, trapY + 10);
+            // Height Line
+            ctx.beginPath();
+            ctx.strokeStyle = "rgba(255, 0, 0, 0.5)";
+            ctx.moveTo(cx - 100, trapY);
+            ctx.lineTo(cx + 100, trapY);
+            ctx.stroke();
+            ctx.fillStyle = "rgba(255, 0, 0, 0.7)";
+            ctx.font = "10px monospace";
+            ctx.fillText(`TRAP: ${p.trapH}m`, cx + 120, trapY + 5);
+        }
+
+        // 4. Astronaut
+        if (!state.dead) {
+            const charY = groundY - (state.y * PPM);
+            ctx.save();
+            ctx.translate(cx, charY);
+            
+            // Shadow
+            if (state.y > 0.1) {
+                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                const shadowScale = Math.max(0, 1 - state.y/5);
+                ctx.beginPath();
+                ctx.ellipse(0, (state.y * PPM), 20 * shadowScale, 5 * shadowScale, 0, 0, Math.PI*2);
+                ctx.fill();
+            }
+
+            // Body Scale
+            let stretch = 1;
+            if (state.isJumping && Math.abs(state.vy) > 1) {
+                stretch = 1 + (Math.abs(state.vy) * 0.02);
+            }
+            ctx.scale(1/stretch, stretch);
+
+            // Draw Character
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.roundRect(-15, -60, 30, 60, 5); // Body
+            ctx.fill();
+
+            ctx.fillStyle = '#e2e8f0';
+            ctx.beginPath();
+            ctx.arc(0, -70, 18, 0, Math.PI*2); // Helmet
+            ctx.fill();
+
+            ctx.fillStyle = '#38bdf8'; // Visor
+            ctx.beginPath();
+            ctx.roundRect(-10, -75, 20, 12, 4);
+            ctx.fill();
+
+            ctx.fillStyle = '#94a3b8'; // Backpack
+            ctx.fillRect(-22, -55, 7, 40);
+
+            // Arms
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 6;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            if (state.y > 0.1) {
+                ctx.moveTo(-15, -50); ctx.lineTo(-25, -80);
+                ctx.moveTo(15, -50); ctx.lineTo(25, -80);
+            } else {
+                ctx.moveTo(-15, -50); ctx.lineTo(-20, -30);
+                ctx.moveTo(15, -50); ctx.lineTo(20, -30);
+            }
+            ctx.stroke();
+
+            ctx.restore();
+        }
+    }
+
+    // --- Main Loop ---
+    let lastTime = 0;
+    function loop(timestamp) {
+        if (!lastTime) lastTime = timestamp;
+        const dt = Math.min((timestamp - lastTime) / 1000, 0.1); 
+        lastTime = timestamp;
+
+        updatePhysics(dt);
+        draw();
+        requestAnimationFrame(loop);
+    }
+
+    // Start
+    init();
+
+</script>
+</body>
+</html>
