@@ -87,4 +87,92 @@
         "createdAt": "2026-2-4",
         "updatedAt": "2026-2-4"
     }
+    {
+        "id": "Evaporation",
+        "category": {
+            "en-US": "JS",
+            "zh-HK": "JS"
+        },
+        "title": {
+            "en-US": "Evaporation",
+            "zh-HK": "Evaporation"
+        },
+        "description": {
+            "en-US": "Evaporation",
+            "zh-HK": "Evaporation"
+        },
+        "contributors": [
+            "LIU HOI KAY"
+        ],
+        "simulationUrl": "simulations/JS/3a25.html",
+        "screenshotUrl": "screenshots/3a25.png",
+        "createdAt": "2026-2-4",
+        "updatedAt": "2026-2-4"
+    }
+    {
+        "id": "Heat",
+        "category": {
+            "en-US": "JS",
+            "zh-HK": "JS"
+        },
+        "title": {
+            "en-US": "Heat ransfer",
+            "zh-HK": "Heat ransfer"
+        },
+        "description": {
+            "en-US": "Heat ransfer",
+            "zh-HK": "Heat ransfer"
+        },
+        "contributors": [
+            "MA LOK YIN"
+        ],
+        "simulationUrl": "simulations/JS/3d19.html",
+        "screenshotUrl": "screenshots/3d19.png",
+        "createdAt": "2026-2-4",
+        "updatedAt": "2026-2-4"
+    }
+    {
+        "id": "Photosynthesis",
+        "category": {
+            "en-US": "JS",
+            "zh-HK": "JS"
+        },
+        "title": {
+            "en-US": "Photosynthesis Dash",
+            "zh-HK": "Photosynthesis Dash"
+        },
+        "description": {
+            "en-US": "Photosynthesis Dash",
+            "zh-HK": "Photosynthesis Dash"
+        },
+        "contributors": [
+            "WANG YUI KAI"
+        ],
+        "simulationUrl": "simulations/JS/3d26.html",
+        "screenshotUrl": "screenshots/3d26.png",
+        "createdAt": "2026-2-4",
+        "updatedAt": "2026-2-4"
+    }
+    {
+        "id": "Energy",
+        "category": {
+            "en-US": "JS",
+            "zh-HK": "JS"
+        },
+        "title": {
+            "en-US": "Energy Lab"
+            "zh-HK": "Energy Lab"
+        },
+        "description": {
+            "en-US": "Energy Lab",
+            "zh-HK": "Energy Lab"
+        },
+        "contributors": [
+            "LAW HO YI"
+        ],
+        "simulationUrl": "simulations/JS/3A17.html",
+        "screenshotUrl": "screenshots/3A17.png",
+        "createdAt": "2026-2-4",
+        "updatedAt": "2026-2-4"
+    }
 ] 
