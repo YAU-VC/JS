@@ -130,6 +130,29 @@
         "screenshotUrl": "screenshots/3d19.png",
         "createdAt": "2026-2-4",
         "updatedAt": "2026-2-4"
+    },
+    {
+        "id": "Photosynthesis",
+        "category": {
+            "en-US": "JS",
+            "zh-HK": "JS"
+        },
+        "title": {
+            "en-US": "Photosynthesis Dash",
+            "zh-HK": "Photosynthesis Dash"
+        },
+        "description": {
+            "en-US": "Photosynthesis Dash",
+            "zh-HK": "Photosynthesis Dash"
+        },
+        "contributors": [
+            "WANG YUI KAI"
+        ],
+        "simulationUrl": "simulations/JS/3d26.html",
+        "screenshotUrl": "screenshots/3d26.png",
+        "createdAt": "2026-2-4",
+        "updatedAt": "2026-2-4"
     }
+
 
 ] 
