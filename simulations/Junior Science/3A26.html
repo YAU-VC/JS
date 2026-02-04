@@ -1,0 +1,1554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Valtorta College - Spirogyra Lab</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <style>
+        :root {
+            --primary: #2E7D32;
+            --secondary: #81C784;
+            --accent: #FFC107;
+            --dark: #1B5E20;
+            --bg: #f0f7f4;
+            --text: #333;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            overflow: hidden; 
+            touch-action: none; 
+            user-select: none;
+            -webkit-user-select: none; /* Safari/iPad support */
+            -webkit-touch-callout: none;
+        }
+
+        #app-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        canvas {
+            background: #ffffff;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            cursor: pointer;
+            z-index: 1;
+            /* Ensure canvas doesn't highlight on tap */
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* UI Overlay */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            z-index: 10;
+        }
+
+        /* HUD Header */
+        header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid var(--primary);
+            pointer-events: auto;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .game-stats {
+            display: flex;
+            gap: 20px;
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--dark);
+        }
+
+        .stat-box {
+            background: #e8f5e9;
+            padding: 5px 15px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Instructions */
+        #instruction-box {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 30px;
+            border-radius: 30px;
+            text-align: center;
+            pointer-events: auto;
+            transition: opacity 0.3s;
+        }
+        #instruction-text { margin: 0; font-weight: 600; }
+
+        /* Sim UI */
+        .sim-container {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            text-align: center;
+            pointer-events: none;
+        }
+        
+        button {
+            pointer-events: auto;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 0 var(--dark);
+            transition: transform 0.1s;
+            margin: 0 5px;
+        }
+        button:active { transform: translateY(4px); box-shadow: none; }
+        button:disabled { background: #ccc; box-shadow: none; cursor: not-allowed; }
+        
+        .secondary-btn {
+            background: #fff;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+            box-shadow: 0 4px 0 #ccc;
+        }
+
+        /* Modal */
+        #modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 500px;
+            text-align: center;
+            border: 4px solid var(--primary);
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            max-height: 80vh;
+            overflow-y: auto;
+            /* Enhance touch scrolling on iPad */
+            -webkit-overflow-scrolling: touch; 
+        }
+
+        /* Floating Points Animation */
+        .floating-score {
+            position: absolute;
+            font-weight: bold;
+            font-size: 1.5rem;
+            color: var(--accent);
+            text-shadow: 2px 2px 0 #000;
+            pointer-events: none;
+            animation: floatUp 1s forwards;
+            z-index: 50;
+        }
+
+        @keyframes floatUp {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-50px) scale(1.2); opacity: 0; }
+        }
+
+        @keyframes popIn { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .hidden { display: none !important; }
+
+        /* Quiz Input */
+        #quiz-input {
+            padding: 10px; font-size: 1.1rem; border: 2px solid #ccc; border-radius: 8px; width: 70%;
+        }
+        .success { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="ui-layer">
+        <header>
+            <div class="stat-box"><i class="fas fa-microscope"></i> <span id="level-display">Level 1</span></div>
+            <h1>Valtorta College: Spirogyra Lab</h1>
+            <div class="stat-box" style="background: #fff8e1; color: #f57f17;">
+                <i class="fas fa-star"></i> <span id="score-display">0</span>
+            </div>
+        </header>
+
+        <div id="instruction-box">
+            <p id="instruction-text">Tap the pond water to find algae!</p>
+        </div>
+
+        <!-- Bottom Controls -->
+        <div style="position: absolute; bottom: 20px; left: 20px; width: auto; display: flex; gap: 10px; pointer-events: none; z-index: 20;">
+             <button id="btn-reset" class="secondary-btn" style="pointer-events: auto; display:none;">Reset</button>
+             <!-- Sim Button -->
+             <button id="btn-sim" class="hidden" onclick="showSimQuestion()" style="pointer-events: auto;">I see the pattern!</button>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="modal-overlay">
+        <div class="modal-content" id="modal-content">
+            <h1 style="color:var(--primary); margin:0;">BIOLOGY QUEST</h1>
+            <h3>Mission: Spirogyra</h3>
+            <p><strong>Goal:</strong> Analyze structure and compare photosynthesis in water vs. land plants.</p>
+            <div style="text-align:left; background:#f9f9f9; padding:15px; border-radius:10px; margin: 15px 0;">
+                <div><i class="fas fa-check-circle"></i> <strong>Level 1:</strong> Find & Label Cell Parts</div>
+                <div><i class="fas fa-check-circle"></i> <strong>Level 2:</strong> Analyze Structure</div>
+                <div><i class="fas fa-check-circle"></i> <strong>Level 3:</strong> Michael's Experiment</div>
+            </div>
+            <button onclick="startGame()">Start Mission</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Game State
+    let gameState = {
+        phase: 'INTRO', 
+        width: 0, height: 0, scale: 1,
+        score: 0,
+        draggedItem: null,
+        
+        // Level Data
+        filaments: [],
+        sunAngle: Math.PI / 2,
+        
+        // Experiment Data (Michael's Experiment)
+        expStep: 'VARIABLES', // VARIABLES, DESTARCH, SUBMERGE, TESTING, RESULT
+        dropperPos: {x: 0, y: 0, originX: 0, originY: 0},
+        
+        // Destarching State
+        destarchAttempts: 0, 
+        destarch: {
+            spiroPos: { x: 0, y: 0, inCupboard: false },
+            leafPos: { x: 0, y: 0, inCupboard: false },
+            lightOn: true,
+            clockProgress: 0, 
+            complete: false
+        },
+        
+        // Submerge State (NEW)
+        submerge: {
+            spiroX: 0, spiroY: 0,
+            inWater: false
+        },
+
+        samples: {
+            spiro: { tested: false, color: '#4caf50' }, 
+            leaf: { tested: false, color: '#66bb6a' }   
+        },
+        varMatches: { iv: null, dv: null, cv: null }
+    };
+
+    // Assets - Added base dimensions for scaling
+    const labels = [
+        { id: 'cellwall', text: 'Cell Wall', x: 0, y: 0, targetX: 0, targetY: 0, baseW: 120, baseH: 44, width: 120, height: 44, isPlaced: false, color: '#795548' },
+        { id: 'chloroplast', text: 'Chloroplast', x: 0, y: 0, targetX: 0, targetY: 0, baseW: 150, baseH: 44, width: 150, height: 44, isPlaced: false, color: '#2E7D32' },
+        { id: 'nucleus', text: 'Nucleus', x: 0, y: 0, targetX: 0, targetY: 0, baseW: 100, baseH: 44, width: 100, height: 44, isPlaced: false, color: '#E91E63' }
+    ];
+
+    // --- Core Systems ---
+
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        gameState.width = canvas.width;
+        gameState.height = canvas.height;
+        gameState.scale = Math.min(gameState.width / 800, gameState.height / 600);
+        
+        resetLabelPositions();
+        initFilaments();
+        resetExperiment();
+        resetDestarch();
+    }
+    
+    function addScore(points, x, y) {
+        gameState.score += points;
+        document.getElementById('score-display').innerText = gameState.score;
+        
+        const el = document.createElement('div');
+        el.className = 'floating-score';
+        el.innerText = `+${points}`;
+        el.style.left = x + 'px';
+        el.style.top = y + 'px';
+        document.getElementById('app-container').appendChild(el);
+        setTimeout(() => el.remove(), 1000);
+    }
+
+    function initFilaments() {
+        gameState.filaments = [];
+        for(let i=0; i<6; i++) {
+            gameState.filaments.push({
+                x: Math.random() * gameState.width * 0.8 + gameState.width * 0.1,
+                y: Math.random() * gameState.height * 0.7 + gameState.height * 0.15,
+                angle: Math.random() * Math.PI,
+                color: '#558B2F'
+            });
+        }
+    }
+    
+    function resetExperiment() {
+        gameState.dropperPos = { 
+            x: gameState.width - 100, 
+            y: gameState.height - 100,
+            originX: gameState.width - 100,
+            originY: gameState.height - 100
+        };
+        gameState.samples.spiro.tested = false;
+        gameState.samples.spiro.color = '#4caf50'; // Reset to green
+        gameState.samples.leaf.tested = false;
+        gameState.samples.leaf.color = '#66bb6a'; // Reset to green
+        
+        // Init Submerge positions
+        gameState.submerge.spiroX = gameState.width * 0.1;
+        gameState.submerge.spiroY = gameState.height * 0.7;
+        gameState.submerge.inWater = false;
+    }
+
+    function resetDestarch() {
+        gameState.destarch.spiroPos = { x: gameState.width * 0.3, y: gameState.height * 0.75, inCupboard: false };
+        gameState.destarch.leafPos = { x: gameState.width * 0.5, y: gameState.height * 0.75, inCupboard: false };
+        gameState.destarch.lightOn = true;
+        gameState.destarch.clockProgress = 0;
+        gameState.destarch.complete = false;
+        gameState.destarchAttempts = 0;
+    }
+
+    window.addEventListener('resize', resize);
+    
+    // --- Input Handling ---
+
+    function getMousePos(evt) {
+        const rect = canvas.getBoundingClientRect();
+        // Robust touch handling: use first available touch point
+        let clientX, clientY;
+        
+        if (evt.changedTouches && evt.changedTouches.length > 0) {
+            clientX = evt.changedTouches[0].clientX;
+            clientY = evt.changedTouches[0].clientY;
+        } else if (evt.touches && evt.touches.length > 0) {
+            clientX = evt.touches[0].clientX;
+            clientY = evt.touches[0].clientY;
+        } else {
+            clientX = evt.clientX;
+            clientY = evt.clientY;
+        }
+
+        // Account for any CSS scaling
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+
+        return { 
+            x: (clientX - rect.left) * scaleX, 
+            y: (clientY - rect.top) * scaleY 
+        };
+    }
+
+    function handleInputStart(e) {
+        // Prevent default browser scrolling/zooming on touch
+        if(e.cancelable) e.preventDefault();
+        
+        const pos = getMousePos(e);
+        const hitPadding = 20 * gameState.scale; 
+        
+        // Level 1: Find Algae
+        if (gameState.phase === 'VIEW_DISTANCE') {
+             const hit = gameState.filaments.some(f => {
+                 return Math.hypot(pos.x - f.x, pos.y - f.y) < (80 * gameState.scale + hitPadding);
+             });
+             if (hit) {
+                 addScore(50, pos.x, pos.y);
+                 startStructureLab();
+             }
+             return;
+        }
+
+        // Level 1b: Labels
+        if (gameState.phase === 'PART1') {
+            labels.forEach(l => {
+                if (l.isPlaced) return;
+                // Expanded hitbox for touch
+                if (pos.x > l.x - hitPadding && 
+                    pos.x < l.x + l.width + hitPadding && 
+                    pos.y > l.y - hitPadding && 
+                    pos.y < l.y + l.height + hitPadding) {
+                    gameState.draggedItem = l;
+                }
+            });
+        } 
+        
+        // Level 2: Sun
+        else if (gameState.phase === 'SIMULATION') {
+            const centerX = gameState.width / 2;
+            const sunRadius = 250 * gameState.scale;
+            const sunX = centerX + Math.cos(gameState.sunAngle) * sunRadius * -1;
+            const sunY = gameState.height * 0.7 - Math.sin(gameState.sunAngle) * sunRadius;
+            
+            if (Math.hypot(pos.x - sunX, pos.y - sunY) < (60 * gameState.scale + hitPadding)) {
+                gameState.draggedItem = 'SUN';
+            }
+        }
+
+        // Level 3: Destarching
+        else if (gameState.phase === 'PART2' && gameState.expStep === 'DESTARCH') {
+            const sPos = gameState.destarch.spiroPos;
+            const lPos = gameState.destarch.leafPos;
+            
+            // Check Beakers
+            if (Math.hypot(pos.x - sPos.x, pos.y - sPos.y) < 60 * gameState.scale) gameState.draggedItem = 'SPIRO_BEAKER';
+            else if (Math.hypot(pos.x - lPos.x, pos.y - lPos.y) < 60 * gameState.scale) gameState.draggedItem = 'LEAF_BEAKER';
+            
+            // Check Switch
+            else if (Math.hypot(pos.x - (gameState.width*0.9), pos.y - (gameState.height*0.3)) < 40 * gameState.scale) {
+                // Toggle Light
+                if (gameState.destarch.spiroPos.inCupboard && gameState.destarch.leafPos.inCupboard) {
+                    gameState.destarch.lightOn = !gameState.destarch.lightOn;
+                    if(!gameState.destarch.lightOn) {
+                         document.getElementById('instruction-text').textContent = "Drag the clock to wait 24 hours.";
+                    }
+                } else {
+                    alert("Put plants in cupboard first!");
+                }
+            }
+            // Check Clock
+            else if (Math.hypot(pos.x - (gameState.width*0.1), pos.y - (gameState.height*0.2)) < 60 * gameState.scale) {
+                if (!gameState.destarch.lightOn) {
+                    gameState.draggedItem = 'CLOCK';
+                }
+            }
+        }
+        
+        // Level 3: Submerge (NEW)
+        else if (gameState.phase === 'PART2' && gameState.expStep === 'SUBMERGE') {
+            if (!gameState.submerge.inWater) {
+                // Check dry spirogyra
+                const sx = gameState.submerge.spiroX;
+                const sy = gameState.submerge.spiroY;
+                if (Math.hypot(pos.x - sx, pos.y - sy) < 50 * gameState.scale) {
+                    gameState.draggedItem = 'LOOSE_SPIRO';
+                }
+            }
+        }
+
+        // Level 3: Experiment Dropper
+        else if (gameState.phase === 'PART2' && gameState.expStep === 'TESTING') {
+            const d = gameState.dropperPos;
+            if (Math.hypot(pos.x - d.x, pos.y - d.y) < (50 * gameState.scale + hitPadding)) {
+                gameState.draggedItem = 'DROPPER';
+            }
+        }
+    }
+
+    function handleInputMove(e) {
+        if (!gameState.draggedItem) {
+             if(gameState.phase === 'VIEW_DISTANCE') {
+                const pos = getMousePos(e);
+                const hit = gameState.filaments.some(f => Math.hypot(pos.x - f.x, pos.y - f.y) < 80 * gameState.scale);
+                canvas.style.cursor = hit ? 'pointer' : 'default';
+            }
+            return;
+        }
+        
+        if(e.cancelable) e.preventDefault();
+        const pos = getMousePos(e);
+
+        if (gameState.phase === 'PART1' && typeof gameState.draggedItem === 'object') {
+            gameState.draggedItem.x = pos.x - gameState.draggedItem.width / 2;
+            gameState.draggedItem.y = pos.y - gameState.draggedItem.height / 2;
+        } 
+        else if (gameState.phase === 'SIMULATION' && gameState.draggedItem === 'SUN') {
+            const centerX = gameState.width / 2;
+            const centerY = gameState.height * 0.7;
+            let angle = Math.atan2(centerY - pos.y, centerX - pos.x);
+            if (angle < 0.2) angle = 0.2; if (angle > Math.PI - 0.2) angle = Math.PI - 0.2;
+            gameState.sunAngle = angle;
+        }
+        else if (gameState.phase === 'PART2' && gameState.expStep === 'DESTARCH') {
+            if (gameState.draggedItem === 'SPIRO_BEAKER') {
+                gameState.destarch.spiroPos.x = pos.x;
+                gameState.destarch.spiroPos.y = pos.y;
+            } else if (gameState.draggedItem === 'LEAF_BEAKER') {
+                gameState.destarch.leafPos.x = pos.x;
+                gameState.destarch.leafPos.y = pos.y;
+            } else if (gameState.draggedItem === 'CLOCK') {
+                // Simulating winding clock
+                gameState.destarch.clockProgress = Math.min(gameState.destarch.clockProgress + 0.02, 1);
+            }
+        }
+        else if (gameState.phase === 'PART2' && gameState.expStep === 'SUBMERGE' && gameState.draggedItem === 'LOOSE_SPIRO') {
+            gameState.submerge.spiroX = pos.x;
+            gameState.submerge.spiroY = pos.y;
+        }
+        else if (gameState.phase === 'PART2' && gameState.expStep === 'TESTING' && gameState.draggedItem === 'DROPPER') {
+            gameState.dropperPos.x = pos.x;
+            gameState.dropperPos.y = pos.y;
+        }
+    }
+
+    function handleInputEnd(e) {
+        if(e.cancelable) e.preventDefault();
+        
+        if (gameState.phase === 'PART1' && gameState.draggedItem && typeof gameState.draggedItem === 'object') {
+            const item = gameState.draggedItem;
+            const dist = Math.hypot(item.x - item.targetX, item.y - item.targetY);
+            if (dist < 80 * gameState.scale) {
+                item.isPlaced = true;
+                item.x = item.targetX;
+                item.y = item.targetY;
+                addScore(100, item.x, item.y);
+                checkPart1Completion();
+            } else {
+                resetLabelPositions();
+            }
+        } 
+        else if (gameState.phase === 'PART2' && gameState.expStep === 'DESTARCH') {
+            const cupboardX = gameState.width * 0.75;
+            const cupboardY = gameState.height * 0.3;
+            const cupboardW = 200 * gameState.scale;
+            const cupboardH = 300 * gameState.scale;
+
+            const checkCupboard = (pos) => {
+                return pos.x > cupboardX && pos.x < cupboardX + cupboardW && 
+                       pos.y > cupboardY && pos.y < cupboardY + cupboardH;
+            };
+
+            if (gameState.draggedItem === 'SPIRO_BEAKER') {
+                gameState.destarch.spiroPos.inCupboard = checkCupboard(gameState.destarch.spiroPos);
+            }
+            if (gameState.draggedItem === 'LEAF_BEAKER') {
+                gameState.destarch.leafPos.inCupboard = checkCupboard(gameState.destarch.leafPos);
+            }
+            
+            // Check progress
+            if (gameState.destarch.spiroPos.inCupboard && gameState.destarch.leafPos.inCupboard) {
+                if (gameState.destarch.lightOn) {
+                    document.getElementById('instruction-text').textContent = "Both plants secured. Turn off the light switch.";
+                }
+            }
+            
+            if (gameState.destarch.clockProgress >= 1) {
+                if(!gameState.destarch.complete) {
+                    gameState.destarch.complete = true;
+                    document.getElementById('instruction-text').textContent = "24 Hours Passed! Plants Destarched.";
+                    gameState.destarch.lightOn = true; // Turn light back on
+                    setTimeout(showDestarchQuiz, 1500); // Show quiz after delay
+                }
+            }
+        }
+        else if (gameState.phase === 'PART2' && gameState.expStep === 'SUBMERGE' && gameState.draggedItem === 'LOOSE_SPIRO') {
+            // Target Beaker is at leftX (from drawExperiment) = width * 0.3
+            const beakerX = gameState.width * 0.3;
+            const beakerY = gameState.height * 0.75;
+            
+            if (Math.hypot(gameState.submerge.spiroX - beakerX, gameState.submerge.spiroY - beakerY) < 80 * gameState.scale) {
+                gameState.submerge.inWater = true;
+                addScore(100, beakerX, beakerY);
+                document.getElementById('instruction-text').textContent = "Spirogyra submerged.";
+                setTimeout(showSubmergeQuiz, 1000);
+            }
+        }
+        else if (gameState.phase === 'PART2' && gameState.expStep === 'TESTING' && gameState.draggedItem === 'DROPPER') {
+            const d = gameState.dropperPos;
+            if (d.x < gameState.width/2 && d.y > gameState.height/2) {
+                // Spirogyra Result: Grey/Light Blue (Low Starch)
+                gameState.samples.spiro.tested = true;
+                gameState.samples.spiro.color = '#90A4AE'; 
+                addScore(50, d.x, d.y);
+            }
+            else if (d.x > gameState.width/2 && d.y > gameState.height/2) {
+                // Leaf Result: Deep Blue-Black (High Starch)
+                gameState.samples.leaf.tested = true;
+                gameState.samples.leaf.color = '#0D47A1';
+                addScore(50, d.x, d.y);
+            }
+            d.x = d.originX;
+            d.y = d.originY;
+            if(gameState.samples.spiro.tested && gameState.samples.leaf.tested) {
+                setTimeout(showObservationQuiz, 1500); // Changed from finishGame to Observation
+            }
+        }
+        gameState.draggedItem = null;
+    }
+    
+    // Wire up events
+    canvas.addEventListener('mousedown', handleInputStart);
+    canvas.addEventListener('mousemove', handleInputMove);
+    canvas.addEventListener('mouseup', handleInputEnd);
+    canvas.addEventListener('touchstart', handleInputStart, {passive: false});
+    canvas.addEventListener('touchmove', handleInputMove, {passive: false});
+    canvas.addEventListener('touchend', handleInputEnd, {passive: false});
+
+    // --- Game Logic ---
+
+    function startGame() {
+        resize();
+        document.getElementById('modal-overlay').classList.add('hidden');
+        gameState.phase = 'VIEW_DISTANCE';
+        document.getElementById('instruction-text').textContent = "Tap the Green Algae filament to zoom in!";
+        document.getElementById('level-display').innerText = "Level 1: Discovery";
+    }
+    
+    function resetLabelPositions() {
+        const gap = (gameState.height * 0.6) / 4; 
+        const startX = 20 * gameState.scale;
+        const startY = 100 * gameState.scale;
+        labels.forEach((l, index) => {
+            l.width = l.baseW * gameState.scale;
+            l.height = l.baseH * gameState.scale;
+            if (!l.isPlaced) {
+                l.x = startX;
+                l.y = startY + (index * gap);
+            }
+        });
+    }
+
+    function startStructureLab() {
+        gameState.phase = 'PART1';
+        document.getElementById('instruction-text').textContent = "Drag labels to the Cell Parts.";
+        
+        const cx = gameState.width / 2;
+        const cy = gameState.height / 2;
+        
+        labels.find(l => l.id === 'chloroplast').targetX = cx - 50 * gameState.scale;
+        labels.find(l => l.id === 'chloroplast').targetY = cy - 20 * gameState.scale;
+        labels.find(l => l.id === 'nucleus').targetX = cx + 80 * gameState.scale;
+        labels.find(l => l.id === 'nucleus').targetY = cy + 10 * gameState.scale;
+        labels.find(l => l.id === 'cellwall').targetX = cx;
+        labels.find(l => l.id === 'cellwall').targetY = cy - 70 * gameState.scale;
+        
+        document.getElementById('btn-reset').style.display = 'inline-block';
+        document.getElementById('btn-reset').onclick = () => { labels.forEach(l => l.isPlaced = false); resetLabelPositions(); };
+    }
+
+    function checkPart1Completion() {
+        if (labels.every(l => l.isPlaced)) {
+            gameState.phase = 'QUIZ';
+            showQuizModal();
+        }
+    }
+    
+    function showQuizModal() {
+        const modal = document.getElementById('modal-overlay');
+        const content = document.getElementById('modal-content');
+        modal.classList.remove('hidden');
+        
+        content.innerHTML = `
+            <h2>Observation Check</h2>
+            <p>You identified the chloroplast. Look at its shape!</p>
+            <p>How would you describe the chloroplast arrangement?</p>
+            <input type="text" id="quiz-input" placeholder="Enter shape name..." autocomplete="off">
+            <p id="feedback-msg"></p>
+            <button onclick="checkAnswer()">Submit</button>
+        `;
+    }
+    
+    window.checkAnswer = function() {
+        const input = document.getElementById('quiz-input');
+        const feedback = document.getElementById('feedback-msg');
+        const val = input.value.toLowerCase().trim();
+        
+        // Tier 1: Precise Scientific Terms
+        if (val.includes('spiral') || val.includes('helix') || val.includes('helical') || val.includes('coil') || val.includes('ribbon')) {
+            feedback.className = 'success';
+            feedback.style.color = 'green';
+            feedback.textContent = "Excellent! 'Spiral' is the precise scientific term. +200 Points";
+            addScore(200, window.innerWidth/2, window.innerHeight/2);
+            setTimeout(() => {
+                document.getElementById('modal-overlay').classList.add('hidden');
+                startSimulationPhase();
+            }, 2000);
+        } 
+        // Tier 2: Simple/Observational Terms
+        else if (val.includes('circle') || val.includes('curved') || val.includes('curve') || val.includes('round') || val.includes('twist') || val.includes('spring') || val.includes('zig')) {
+            feedback.className = 'success';
+            feedback.style.color = '#F57F17'; 
+            feedback.textContent = "Good observation! It is curved. A more precise scientific word is 'Spiral'. +150 Points";
+            addScore(150, window.innerWidth/2, window.innerHeight/2);
+            setTimeout(() => {
+                document.getElementById('modal-overlay').classList.add('hidden');
+                startSimulationPhase();
+            }, 3500);
+        } 
+        else {
+            feedback.className = 'error';
+            feedback.style.color = 'red';
+            feedback.textContent = "Look closer... does it go straight or round and round?";
+        }
+    };
+
+    function startSimulationPhase() {
+        gameState.phase = 'SIMULATION';
+        document.getElementById('level-display').innerText = "Level 2: Analysis";
+        document.getElementById('instruction-text').textContent = "Drag the SUN. Compare the light absorption.";
+        document.getElementById('btn-reset').style.display = 'none';
+        document.getElementById('btn-sim').classList.remove('hidden');
+    }
+
+    window.showSimQuestion = function() {
+        const modal = document.getElementById('modal-overlay');
+        const content = document.getElementById('modal-content');
+        modal.classList.remove('hidden');
+        
+        content.innerHTML = `
+            <h2>Critical Thinking</h2>
+            <p>Why is this spiral shape an advantage?</p>
+            <div style="text-align: left; margin: 20px auto; max-width: 300px;">
+                <label><input type="radio" name="simQ" value="A"> Looks nice to fish.</label><br><br>
+                <label><input type="radio" name="simQ" value="B"> Ensures stable light absorption.</label><br><br>
+                <label><input type="radio" name="simQ" value="C"> Helps it swim fast.</label>
+            </div>
+            <button onclick="checkSimAnswer()">Submit</button>
+            <p id="sim-feedback" style="min-height:20px;"></p>
+        `;
+    }
+
+    window.checkSimAnswer = function() {
+        const radios = document.getElementsByName('simQ');
+        let val = null;
+        for (const r of radios) { if(r.checked) val = r.value; }
+        
+        if (val === 'B') {
+            addScore(200, window.innerWidth/2, window.innerHeight/2);
+            document.getElementById('modal-overlay').classList.add('hidden');
+            document.getElementById('btn-sim').classList.add('hidden');
+            startMichaelExperiment();
+        } else {
+            document.getElementById('sim-feedback').innerHTML = "<span class='error'>Incorrect. Think about the sun moving.</span>";
+        }
+    }
+
+    function startMichaelExperiment() {
+        gameState.phase = 'PART2';
+        gameState.expStep = 'VARIABLES';
+        document.getElementById('level-display').innerText = "Level 3: Michael's Experiment";
+        document.getElementById('instruction-text').textContent = "Identify the variables for the fair test.";
+        
+        // Modal for Variables
+        const modal = document.getElementById('modal-overlay');
+        const content = document.getElementById('modal-content');
+        modal.classList.remove('hidden');
+        
+        content.innerHTML = `
+            <h2>Michael's Experiment</h2>
+            <p>Michael wants to compare gas exchange between <strong>Land Plants</strong> (Leaf) and <strong>Water Plants</strong> (Spirogyra).</p>
+            <p><strong>Fact:</strong> Spirogyra has NO stomata. Leaves have stomata.</p>
+            <p>Match the variables correctly:</p>
+            
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; text-align:left; margin-bottom:20px;">
+                <div style="font-weight:bold;">1. Independent Var:</div>
+                <select id="var-iv">
+                    <option value="">Select...</option>
+                    <option value="correct">Type of Plant (Stomata)</option>
+                    <option value="wrong">Amount of Light</option>
+                    <option value="wrong">Iodine Color</option>
+                </select>
+                
+                <div style="font-weight:bold;">2. Dependent Var:</div>
+                <select id="var-dv">
+                    <option value="">Select...</option>
+                    <option value="wrong">Type of Plant</option>
+                    <option value="wrong">Amount of Light</option>
+                    <option value="correct">Iodine Color (Starch)</option>
+                </select>
+                
+                <div style="font-weight:bold;">3. Controlled Var:</div>
+                <select id="var-cv">
+                    <option value="">Select...</option>
+                    <option value="wrong">Type of Plant</option>
+                    <option value="correct">Light & Air Conditions</option>
+                    <option value="wrong">Iodine Color</option>
+                </select>
+            </div>
+            
+            <button onclick="checkVariables()">Start Experiment</button>
+            <p id="var-feedback" style="min-height:20px;"></p>
+        `;
+    }
+    
+    window.checkVariables = function() {
+        const iv = document.getElementById('var-iv').value;
+        const dv = document.getElementById('var-dv').value;
+        const cv = document.getElementById('var-cv').value;
+        const fb = document.getElementById('var-feedback');
+        
+        if(iv === 'correct' && dv === 'correct' && cv === 'correct') {
+            addScore(300, window.innerWidth/2, window.innerHeight/2);
+            
+            // Show explanation
+            const content = document.getElementById('modal-content');
+            content.innerHTML = `
+                <h2 style="color:var(--primary);">Experimental Design</h2>
+                <div style="text-align:left; font-size:0.95rem; line-height:1.5; background:#f1f8e9; padding:15px; border-radius:10px; border:1px solid #c5e1a5; max-height: 50vh; overflow-y: auto;">
+                    <p>Michael is conducting an experiment aims to compare gas exchange rate between plants on land and in water.</p>
+                    <ul style="padding-left: 20px;">
+                        <li style="margin-bottom:8px;"><strong>Independent Variable:</strong> Types of plant used (presence of stomata, noticed that the spirogyra has no stomata, while the tree leaf has).</li>
+                        <li style="margin-bottom:8px;"><strong>Dependent Variable:</strong> Colour change of iodine solution (which indices the amount of starch produced).</li>
+                        <li style="margin-bottom:8px;"><strong>Controlled Variables:</strong> Also, the light received and air condition should be same for a fair comparison.</li>
+                    </ul>
+                </div>
+                <!-- Changed Button to start Submerge Phase first -->
+                <button onclick="startSubmergePhase()" style="margin-top:20px;">Start Experiment Setup</button>
+            `;
+        } else {
+            fb.innerHTML = "<span class='error'>Incorrect. Check definitions! Independent = What we change. Dependent = What we measure.</span>";
+        }
+    }
+
+    // UPDATED: Start with Submerge Phase
+    window.startSubmergePhase = function() {
+        document.getElementById('modal-overlay').classList.add('hidden');
+        gameState.expStep = 'SUBMERGE';
+        resetExperiment(); 
+        document.getElementById('instruction-text').textContent = "Step 1: Drag the Spirogyra into the water beaker immediately.";
+    }
+
+    window.showSubmergeQuiz = function() {
+        const modal = document.getElementById('modal-overlay');
+        const content = document.getElementById('modal-content');
+        modal.classList.remove('hidden');
+        
+        content.innerHTML = `
+            <h2>Setup Check</h2>
+            <p>You placed the Spirogyra in water.</p>
+            <p><strong>Q: Why does it need to be submerged in water?</strong></p>
+            <textarea id="quiz-input-submerge" rows="3" style="width: 80%; padding: 10px; font-size: 1rem; border: 2px solid #ccc; border-radius: 8px;" placeholder="Type your answer here..."></textarea>
+            <p id="submerge-feedback" style="min-height:20px; margin-top:10px;"></p>
+            <button onclick="checkSubmergeAnswer()">Submit Answer</button>
+        `;
+    }
+
+    window.checkSubmergeAnswer = function() {
+        const input = document.getElementById('quiz-input-submerge');
+        const feedback = document.getElementById('submerge-feedback');
+        const val = input.value.toLowerCase().trim();
+        
+        const keywords = ['water plant', 'aquatic', 'dry', 'die', 'alive', 'survive', 'live', 'need water'];
+        const isReasonable = keywords.some(k => val.includes(k));
+        
+        if (isReasonable) {
+             feedback.className = 'success';
+             feedback.style.color = 'green';
+             feedback.innerHTML = "<strong>Correct!</strong><br>Spirogyra is a <strong>water plant (aquatic)</strong>.<br>If it is not submerged, it will dry out and die before the experiment begins.";
+             addScore(200, window.innerWidth/2, window.innerHeight/2);
+             
+             const btn = document.querySelector('#modal-content button');
+             if(btn) btn.style.display = 'none';
+
+             setTimeout(() => {
+                // CHANGED: Proceed to Destarch AFTER Submerge
+                startDestarchingPhase(); 
+             }, 4000); 
+        } else {
+             feedback.className = 'error';
+             feedback.style.color = 'red';
+             feedback.textContent = "Think simply: Where does this plant normally live? It needs water to survive.";
+        }
+    }
+
+    // UPDATED: Destarch is now Step 2
+    window.startDestarchingPhase = function() {
+        document.getElementById('modal-overlay').classList.add('hidden');
+        gameState.expStep = 'DESTARCH';
+        resetDestarch();
+        document.getElementById('instruction-text').textContent = "Step 2: Drag plants to the dark cupboard for 24 hours.";
+    }
+
+    // Destarch Quiz Functions
+    window.showDestarchQuiz = function() {
+        const modal = document.getElementById('modal-overlay');
+        const content = document.getElementById('modal-content');
+        modal.classList.remove('hidden');
+        
+        content.innerHTML = `
+            <h2>Destarching Check</h2>
+            <p>We put the plants in the dark for 24 hours.</p>
+            <p><strong>Q: What is the purpose of this step? State its importance.</strong></p>
+            <textarea id="quiz-input-destarch" rows="3" style="width: 80%; padding: 10px; font-size: 1rem; border: 2px solid #ccc; border-radius: 8px;" placeholder="Type your answer here..."></textarea>
+            <p id="destarch-feedback" style="min-height:20px; margin-top:10px;"></p>
+            <button onclick="checkDestarchAnswer()">Submit Answer</button>
+        `;
+    }
+
+    window.checkDestarchAnswer = function() {
+        const input = document.getElementById('quiz-input-destarch');
+        const feedback = document.getElementById('destarch-feedback');
+        const val = input.value.toLowerCase().trim();
+        
+        const keywords = ['starch', 'dark', 'light', 'energy', 'respiration', 'use', 'remove', 'gone', 'empty', 'no', 'test', 'sure', 'ensure', 'make', 'food', 'store', 'break'];
+        const isReasonable = keywords.some(k => val.includes(k));
+        
+        if (isReasonable) {
+             feedback.className = 'success';
+             feedback.style.color = 'green';
+             feedback.style.textAlign = 'left';
+             feedback.style.fontSize = '0.9rem';
+             feedback.innerHTML = `
+                <strong>Correct! Important Concepts:</strong>
+                <ul style="margin:5px 0; padding-left:20px;">
+                    <li><strong>Light is necessary</strong> for photosynthesis. No light = No new starch.</li>
+                    <li>In the dark, the plant <strong>breaks down starch into glucose</strong> to release energy for maintaining life (Respiration).</li>
+                    <li>This ensures the leaves are starch-free before we start.</li>
+                </ul>`;
+             addScore(200, window.innerWidth/2, window.innerHeight/2);
+             
+             const btn = document.querySelector('#modal-content button');
+             if(btn) btn.style.display = 'none';
+
+             setTimeout(() => {
+                // CHANGED: Proceed to Testing AFTER Destarch
+                startTestingPhase();
+             }, 8000); 
+        } else {
+             gameState.destarchAttempts++;
+             if (gameState.destarchAttempts >= 2) {
+                 feedback.className = 'success'; 
+                 feedback.style.color = '#E65100'; 
+                 feedback.style.textAlign = 'left';
+                 feedback.style.fontSize = '0.9rem';
+                 feedback.innerHTML = `
+                    <strong>Let's learn the answer:</strong>
+                    <ul style="margin:5px 0; padding-left:20px;">
+                        <li>We put plants in the dark to <strong>use up stored starch</strong> (respiration).</li>
+                        <li>This ensures any starch found later is from our experiment only.</li>
+                    </ul>
+                    <em>(Moving on... No points awarded)</em>`;
+                 
+                 const btn = document.querySelector('#modal-content button');
+                 if(btn) btn.style.display = 'none';
+
+                 setTimeout(() => {
+                    startTestingPhase();
+                 }, 8000);
+             } else {
+                 feedback.className = 'error';
+                 feedback.style.color = 'red';
+                 feedback.textContent = `Not quite. Hint: Think about 'starch' and 'light'. (Attempt ${gameState.destarchAttempts}/2)`;
+             }
+        }
+    }
+
+    // UPDATED: Testing is Step 3
+    window.startTestingPhase = function() {
+        document.getElementById('modal-overlay').classList.add('hidden');
+        gameState.expStep = 'TESTING';
+        resetExperiment(); 
+        document.getElementById('instruction-text').innerHTML = "Step 3: After 4 hours in strong sunlight... <br>Drag Iodine to the plants to test for Starch.";
+    }
+
+    // ... Observation and Conclusion functions remain same ...
+
+    // NEW: Observation Phase
+    window.showObservationQuiz = function() {
+        const modal = document.getElementById('modal-overlay');
+        const content = document.getElementById('modal-content');
+        modal.classList.remove('hidden');
+        
+        content.innerHTML = `
+            <h2>Observation</h2>
+            <p>Look at the color of the iodine solution in the two beakers.</p>
+            <p><strong>Q: Describe the difference in color between the Leaf and the Spirogyra.</strong></p>
+            <textarea id="quiz-input-obs" rows="3" style="width: 80%; padding: 10px; font-size: 1rem; border: 2px solid #ccc; border-radius: 8px;" placeholder="e.g., The leaf is..."></textarea>
+            <p id="obs-feedback" style="min-height:20px; margin-top:10px;"></p>
+            <button onclick="checkObservationAnswer()">Submit Answer</button>
+        `;
+    }
+
+    window.checkObservationAnswer = function() {
+        const input = document.getElementById('quiz-input-obs');
+        const feedback = document.getElementById('obs-feedback');
+        const val = input.value.toLowerCase().trim();
+        
+        // Keywords: dark, black, blue, light, grey, different
+        const keywords = ['dark', 'black', 'blue', 'light', 'grey', 'gray', 'different', 'deeper'];
+        const isReasonable = keywords.some(k => val.includes(k));
+        
+        if (isReasonable) {
+             feedback.className = 'success';
+             feedback.style.color = 'green';
+             feedback.innerHTML = "<strong>Good Observation!</strong><br>The Leaf turned <strong>Deep Blue-Black</strong>.<br>The Spirogyra turned <strong>Grey/Light Blue</strong>.";
+             addScore(150, window.innerWidth/2, window.innerHeight/2);
+             
+             const btn = document.querySelector('#modal-content button');
+             if(btn) btn.style.display = 'none';
+
+             setTimeout(() => {
+                showConclusionQuiz();
+             }, 3000); 
+        } else {
+             feedback.className = 'error';
+             feedback.style.color = 'red';
+             feedback.textContent = "Look closely at the beakers. Which one is darker?";
+        }
+    }
+
+    // NEW: Conclusion Phase
+    window.showConclusionQuiz = function() {
+        const content = document.getElementById('modal-content');
+        
+        content.innerHTML = `
+            <h2>Draw Conclusion</h2>
+            <div style="background:#e3f2fd; padding:10px; border-radius:8px; margin-bottom:15px; font-size:0.9rem; text-align:left;">
+                <strong>Key Concept:</strong> A darker iodine color indicates a <strong>HIGHER</strong> amount of starch present.
+            </div>
+            <p>The Leaf (with Stomata) produced more starch than Spirogyra (No Stomata).</p>
+            <p><strong>Q: What does this indicate about the role of stomata in gas exchange?</strong></p>
+            <textarea id="quiz-input-conc" rows="3" style="width: 80%; padding: 10px; font-size: 1rem; border: 2px solid #ccc; border-radius: 8px;" placeholder="Stomata help..."></textarea>
+            <p id="conc-feedback" style="min-height:20px; margin-top:10px;"></p>
+            <button onclick="checkConclusionAnswer()">Submit Conclusion</button>
+        `;
+    }
+
+    window.checkConclusionAnswer = function() {
+        const input = document.getElementById('quiz-input-conc');
+        const feedback = document.getElementById('conc-feedback');
+        const val = input.value.toLowerCase().trim();
+        
+        // Keywords: fast, speed, efficient, high, rate, better, more
+        const keywords = ['fast', 'speed', 'efficient', 'high', 'rate', 'better', 'more gas', 'help'];
+        const isReasonable = keywords.some(k => val.includes(k));
+        
+        if (isReasonable) {
+             feedback.className = 'success';
+             feedback.style.color = 'green';
+             feedback.innerHTML = "<strong>Excellent Conclusion!</strong><br>Stomata allow for <strong>efficient gas exchange</strong>.<br>This speeds up the intake of CO2, leading to a higher rate of photosynthesis and more starch.";
+             addScore(300, window.innerWidth/2, window.innerHeight/2);
+             
+             const btn = document.querySelector('#modal-content button');
+             if(btn) btn.style.display = 'none';
+
+             setTimeout(() => {
+                showExtensionQuiz(); // Changed from finishGame to Extension
+             }, 6000); 
+        } else {
+             feedback.className = 'error';
+             feedback.style.color = 'red';
+             feedback.textContent = "Hint: If the leaf made more food (starch), did the stomata make gas exchange slower or faster?";
+        }
+    }
+
+    // NEW: Extension Phase
+    window.showExtensionQuiz = function() {
+        const content = document.getElementById('modal-content');
+        content.innerHTML = `
+            <h2>Further Thought</h2>
+            <p>Michael wants to expand his research.</p>
+            <p><strong>Q: If he wants to compare the gas exchange rate of <em>different types</em> of water plants, what organism should he use instead of Spirogyra?</strong></p>
+            <textarea id="quiz-input-ext" rows="3" style="width: 80%; padding: 10px; font-size: 1rem; border: 2px solid #ccc; border-radius: 8px;" placeholder="He should use..."></textarea>
+            <p id="ext-feedback" style="min-height:20px; margin-top:10px;"></p>
+            <button onclick="checkExtensionAnswer()">Submit Answer</button>
+        `;
+    }
+
+    window.checkExtensionAnswer = function() {
+        const input = document.getElementById('quiz-input-ext');
+        const feedback = document.getElementById('ext-feedback');
+        const val = input.value.toLowerCase().trim();
+        
+        // Keywords: other, different, plant, elodea, hydrilla, weed, aquatic
+        const keywords = ['other', 'different', 'plant', 'elodea', 'hydrilla', 'weed', 'aquatic', 'pondweed', 'kelp', 'algae', 'another'];
+        const isReasonable = keywords.some(k => val.includes(k));
+        
+        if (isReasonable) {
+             feedback.className = 'success';
+             feedback.style.color = 'green';
+             feedback.innerHTML = "<strong>Correct!</strong><br>He should use another species of aquatic plant.<br>Common examples for labs include <strong>Elodea</strong> (Canadian Pondweed) or <strong>Hydrilla</strong>.";
+             addScore(200, window.innerWidth/2, window.innerHeight/2);
+             
+             const btn = document.querySelector('#modal-content button');
+             if(btn) btn.style.display = 'none';
+
+             setTimeout(() => {
+                finishGame();
+             }, 5000); 
+        } else {
+             feedback.className = 'error';
+             feedback.style.color = 'red';
+             feedback.textContent = "Hint: If he is comparing different water plants, he needs to change the plant to a different species.";
+        }
+    }
+
+    function finishGame() {
+        gameState.phase = 'END';
+        document.getElementById('modal-overlay').classList.remove('hidden');
+        
+        let rank = "Lab Assistant";
+        if (gameState.score > 1200) rank = "Chief Scientist"; // Adjusted score threshold
+        else if (gameState.score > 800) rank = "Senior Researcher";
+
+        document.getElementById('modal-content').innerHTML = `
+            <h1 style="color:var(--primary)">Mission Complete!</h1>
+            <h2 style="color:var(--accent)">Score: ${gameState.score}</h2>
+            <h3>Rank: ${rank}</h3>
+            <div style="font-size:3rem; margin: 10px;">
+                ${gameState.score > 1200 ? '⭐⭐⭐' : (gameState.score > 800 ? '⭐⭐' : '⭐')}
+            </div>
+            <p style="text-align:left; font-size:0.9rem;"><strong>Summary:</strong><br>
+            1. <strong>Land Plants (Leaf)</strong> have stomata, allowing efficient gas exchange -> <strong>High Starch</strong> (Blue-Black).<br>
+            2. <strong>Water Plants (Spirogyra)</strong> lack stomata (diffusion only) -> <strong>Lower Starch</strong> (Grey/Light Blue) in this comparison.<br>
+            3. <strong>Conclusion:</strong> Stomata speed up gas exchange!</p>
+            <button onclick="location.reload()">Play Again</button>
+        `;
+    }
+
+    // --- Drawing ---
+
+    function drawPondView() {
+        ctx.fillStyle = '#E0F7FA';
+        ctx.fillRect(0,0,gameState.width, gameState.height);
+        
+        gameState.filaments.forEach(f => {
+            ctx.save();
+            ctx.translate(f.x, f.y);
+            ctx.rotate(f.angle);
+            ctx.scale(gameState.scale, gameState.scale);
+            ctx.strokeStyle = f.color;
+            ctx.lineWidth = 6;
+            ctx.lineCap = 'round';
+            ctx.shadowColor = 'rgba(0,0,0,0.1)'; ctx.shadowBlur = 5;
+            
+            ctx.beginPath();
+            ctx.moveTo(-60, 0);
+            for(let i=-60; i<=60; i+=10) ctx.lineTo(i, Math.sin(i*0.2)*5);
+            ctx.stroke();
+            ctx.restore();
+        });
+        
+        ctx.fillStyle = '#006064';
+        ctx.font = 'bold 20px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText("Search for the green algae...", gameState.width/2, gameState.height - 50);
+    }
+    
+    function drawSpirogyra(x, y) {
+        const length = gameState.width * 0.9;
+        const width = 80 * gameState.scale;
+        
+        ctx.save();
+        ctx.translate(x, y);
+
+        // Cell Wall
+        ctx.strokeStyle = '#4caf50'; ctx.lineWidth = 4;
+        ctx.strokeRect(-length/2, -width/2, length, width);
+        // Septa
+        ctx.beginPath();
+        ctx.moveTo(-length/2, -width/2); ctx.lineTo(-length/2, width/2);
+        ctx.moveTo(length/2, -width/2); ctx.lineTo(length/2, width/2);
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(200, 230, 201, 0.3)';
+        ctx.fillRect(-length/2, -width/2, length, width);
+
+        // Spiral Chloroplast
+        ctx.strokeStyle = '#2E7D32'; ctx.lineWidth = 12 * gameState.scale; ctx.lineCap = 'round';
+        ctx.beginPath();
+        const freq = 0.04; const amp = width/2 - 10;
+        for (let i = -length/2; i <= length/2; i+=2) {
+            let yp = Math.sin(i * freq) * amp;
+            if (i===-length/2) ctx.moveTo(i, yp); else ctx.lineTo(i, yp);
+        }
+        ctx.stroke();
+
+        // Nucleus
+        ctx.fillStyle = '#E91E63'; ctx.beginPath(); ctx.arc(80*gameState.scale, 0, 10, 0, Math.PI*2); ctx.fill();
+        
+        ctx.restore();
+    }
+    
+    function drawSimulation() {
+        const grad = ctx.createLinearGradient(0, 0, 0, gameState.height);
+        grad.addColorStop(0, '#B3E5FC'); grad.addColorStop(1, '#E1F5FE');
+        ctx.fillStyle = grad; ctx.fillRect(0,0,gameState.width, gameState.height);
+        
+        const cx = gameState.width / 2;
+        const cy = gameState.height * 0.7;
+        const rad = 250 * gameState.scale;
+
+        // Sun
+        const sunX = cx + Math.cos(gameState.sunAngle) * rad * -1;
+        const sunY = cy - Math.sin(gameState.sunAngle) * rad;
+        
+        ctx.fillStyle = '#FDB813'; ctx.shadowColor='#FDB813'; ctx.shadowBlur=20;
+        ctx.beginPath(); ctx.arc(sunX, sunY, 30*gameState.scale, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
+        
+        // Models
+        const flatX = cx - 150*gameState.scale;
+        const spirX = cx + 150*gameState.scale;
+        
+        // Draw Models
+        ctx.fillStyle = '#4CAF50'; ctx.fillRect(flatX-40, cy, 80, 10);
+        ctx.fillText("Flat", flatX, cy+30);
+        
+        ctx.strokeStyle = '#2E7D32'; ctx.lineWidth=8; ctx.beginPath();
+        for(let i=0; i<4; i++) {
+             ctx.moveTo(spirX-40, cy-10+(i*10));
+             ctx.bezierCurveTo(spirX, cy+(i*10)+10, spirX+40, cy-10+(i*10), spirX+40, cy+(i*10));
+        }
+        ctx.stroke();
+        ctx.fillText("Spiral", spirX, cy+30);
+
+        // Meters
+        const iFlat = Math.sin(gameState.sunAngle);
+        const iSpir = 0.75;
+        drawMeter(flatX, cy+60, iFlat);
+        drawMeter(spirX, cy+60, iSpir);
+    }
+    
+    function drawMeter(x, y, val) {
+        ctx.fillStyle = '#ddd'; ctx.fillRect(x-20, y, 40, 60);
+        ctx.fillStyle = val > 0.8 ? '#FF5722' : (val > 0.5 ? '#4CAF50' : '#FFC107');
+        ctx.fillRect(x-20, y + 60 - (val*60), 40, val*60);
+        ctx.strokeRect(x-20, y, 40, 60);
+    }
+    
+    function drawLabels() {
+        labels.forEach(l => {
+            if (!l.isPlaced) {
+                ctx.strokeStyle = l.color; ctx.setLineDash([5,5]); ctx.strokeRect(l.targetX, l.targetY, l.width, l.height); ctx.setLineDash([]);
+            }
+            if(l.isPlaced) {
+                 ctx.fillStyle = l.color;
+            } else {
+                 ctx.fillStyle = '#FFF9C4';
+            }
+            
+            ctx.strokeStyle = '#333'; ctx.lineWidth=2;
+            
+            if(gameState.draggedItem === l) { 
+                ctx.shadowColor='rgba(0,0,0,0.5)'; ctx.shadowBlur=15; 
+                ctx.fillStyle = '#fff';
+            } else if (!l.isPlaced) {
+                ctx.shadowColor = 'rgba(0,0,0,0.2)'; ctx.shadowBlur = 5;
+                ctx.shadowOffsetY = 2;
+            }
+
+            ctx.fillRect(l.x, l.y, l.width, l.height);
+            ctx.strokeRect(l.x, l.y, l.width, l.height);
+            ctx.shadowColor='transparent'; ctx.shadowOffsetY = 0;
+
+            // Adjusted Font size for readability
+            ctx.fillStyle = '#333';
+            ctx.font = `bold ${Math.max(12, 14 * gameState.scale)}px Arial`; 
+            ctx.textAlign='center'; ctx.textBaseline='middle';
+            ctx.fillText(l.text, l.x+l.width/2, l.y+l.height/2);
+            
+            if(l.isPlaced) {
+                ctx.beginPath(); ctx.moveTo(l.x+l.width/2, l.y+l.height);
+                ctx.lineTo(l.x+l.width/2, gameState.height/2-20);
+                ctx.strokeStyle=l.color; ctx.lineWidth=1; ctx.stroke();
+            }
+        });
+    }
+
+    // --- Experiment Drawing (Michael's Experiment) ---
+    
+    function drawExperiment() {
+        if(gameState.expStep === 'DESTARCH') {
+            drawDestarching();
+            return;
+        }
+
+        // Standard Lab Bench
+        ctx.fillStyle = '#ECEFF1';
+        ctx.fillRect(0, gameState.height * 0.6, gameState.width, gameState.height * 0.4);
+        ctx.fillStyle = '#CFD8DC';
+        ctx.fillRect(0, gameState.height * 0.6, gameState.width, 10); 
+        
+        // Setup positions
+        const leftX = gameState.width * 0.3;
+        const rightX = gameState.width * 0.7;
+        const baseY = gameState.height * 0.75;
+        
+        // SUBMERGE PHASE VISUALS
+        if (gameState.expStep === 'SUBMERGE') {
+            // Draw Beaker A (Water only)
+            drawBeaker(leftX, baseY, "Water", "#E0F7FA", false); // Empty water beaker
+            
+            // Draw Beaker B (Leaf - Already setup)
+            drawBeaker(rightX, baseY, "Land Plant (Leaf)", "#66bb6a", false);
+            
+            // Draw Loose Spirogyra
+            if (!gameState.submerge.inWater) {
+                const sx = gameState.submerge.spiroX;
+                const sy = gameState.submerge.spiroY;
+                
+                // Draw a dried/loose spirogyra
+                ctx.save();
+                ctx.translate(sx, sy);
+                ctx.strokeStyle = '#2E7D32';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(-30, 0);
+                for(let i=0; i<60; i+=10) ctx.lineTo(-30 + i, Math.sin(i)*5);
+                ctx.stroke();
+                
+                // Label
+                ctx.fillStyle = '#333';
+                ctx.font = '12px Arial';
+                ctx.fillText("Spirogyra", 0, 20);
+                ctx.restore();
+            } else {
+                // If dragged in, show it inside (Visual confirmation before quiz)
+                drawBeaker(leftX, baseY, "Spirogyra + Water", "#4caf50", true);
+            }
+            return;
+        }
+
+        // TESTING PHASE VISUALS
+        // Draw Beaker A (Spirogyra)
+        drawBeaker(leftX, baseY, "Water Plant (Spirogyra)", gameState.samples.spiro.color, true);
+        
+        // Draw Beaker B (Leaf)
+        drawBeaker(rightX, baseY, "Land Plant (Leaf)", gameState.samples.leaf.color, false);
+        
+        // Draw Dropper
+        if(gameState.expStep === 'TESTING') {
+            drawDropper(gameState.dropperPos.x, gameState.dropperPos.y);
+            
+            ctx.fillStyle = '#333';
+            ctx.font = 'bold 16px Arial';
+            ctx.fillText("Drag Iodine Dropper to plants", gameState.width/2, 100);
+        }
+    }
+
+    function drawDestarching() {
+        // Dark overlay if lights off
+        const isDark = !gameState.destarch.lightOn;
+
+        // Wall
+        ctx.fillStyle = isDark ? '#263238' : '#ECEFF1';
+        ctx.fillRect(0, 0, gameState.width, gameState.height);
+
+        // Cupboard
+        const cupboardX = gameState.width * 0.75;
+        const cupboardY = gameState.height * 0.3;
+        const cupboardW = 200 * gameState.scale;
+        const cupboardH = 300 * gameState.scale;
+
+        ctx.fillStyle = isDark ? '#3E2723' : '#795548';
+        ctx.fillRect(cupboardX, cupboardY, cupboardW, cupboardH);
+        
+        // Cupboard Label
+        ctx.fillStyle = '#fff';
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText("Dark Cupboard", cupboardX + cupboardW/2, cupboardY + 30);
+        
+        // Light Switch
+        ctx.fillStyle = isDark ? '#555' : '#fff';
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 2;
+        const swX = gameState.width * 0.9;
+        const swY = gameState.height * 0.3;
+        ctx.fillRect(swX, swY, 40 * gameState.scale, 60 * gameState.scale);
+        ctx.strokeRect(swX, swY, 40 * gameState.scale, 60 * gameState.scale);
+        // Toggle
+        ctx.fillStyle = isDark ? '#f44336' : '#4CAF50';
+        ctx.fillRect(swX + 10 * gameState.scale, swY + (isDark ? 35 : 10) * gameState.scale, 20 * gameState.scale, 15 * gameState.scale);
+        
+        // Beakers
+        drawBeaker(gameState.destarch.spiroPos.x, gameState.destarch.spiroPos.y, "Spirogyra", "#4caf50", true);
+        drawBeaker(gameState.destarch.leafPos.x, gameState.destarch.leafPos.y, "Leaf", "#66bb6a", false);
+
+        // Overlay for Darkness
+        if(isDark) {
+            ctx.fillStyle = 'rgba(0,0,0,0.85)';
+            ctx.fillRect(0, 0, gameState.width, gameState.height);
+            
+            // Highlight clock
+             ctx.save();
+             ctx.globalCompositeOperation = 'destination-out';
+             ctx.beginPath();
+             ctx.arc(gameState.width * 0.1 + 50*gameState.scale, gameState.height * 0.2 + 50*gameState.scale, 70 * gameState.scale, 0, Math.PI*2);
+             ctx.fill();
+             ctx.restore();
+        }
+
+        // Clock
+        drawClock(gameState.width * 0.1, gameState.height * 0.2, gameState.destarch.clockProgress);
+    }
+
+    function drawClock(x, y, progress) {
+        const r = 50 * gameState.scale;
+        ctx.save();
+        ctx.translate(x + r, y + r);
+        
+        // Face
+        ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2);
+        ctx.fillStyle = '#fff'; ctx.fill();
+        ctx.strokeStyle = '#333'; ctx.lineWidth = 4; ctx.stroke();
+        
+        // Markers
+        ctx.fillStyle = '#333';
+        for(let i=0; i<12; i++) {
+            ctx.save();
+            ctx.rotate(i * Math.PI/6);
+            ctx.fillRect(-2, -r+5, 4, 10);
+            ctx.restore();
+        }
+        
+        // Hand (Progress simulates 24 hours = 2 rotations)
+        const angle = progress * Math.PI * 4; // 2 Rotations
+        ctx.save();
+        ctx.rotate(angle);
+        ctx.strokeStyle = '#D32F2F'; ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(0, 10); ctx.lineTo(0, -r+10); ctx.stroke();
+        ctx.restore();
+
+        ctx.restore();
+        
+        // Label
+        ctx.fillStyle = '#fff'; 
+        ctx.textAlign = 'center';
+        if(progress > 0) ctx.fillText(Math.floor(progress * 24) + "h", x+r, y + r*2.5);
+    }
+    
+    function drawBeaker(x, y, label, contentColor, isAlgae) {
+        const w = 120 * gameState.scale;
+        const h = 150 * gameState.scale;
+        
+        // Glass
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.strokeStyle = '#90A4AE';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.rect(x - w/2, y - h, w, h);
+        ctx.fill();
+        ctx.stroke();
+        
+        // Liquid
+        ctx.fillStyle = 'rgba(179, 229, 252, 0.3)';
+        ctx.fillRect(x - w/2 + 2, y - h*0.8, w - 4, h*0.8);
+        
+        // Plant Content
+        if (isAlgae) {
+            ctx.strokeStyle = contentColor;
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(x - 30, y - 50);
+            for(let i=0; i<60; i+=10) ctx.lineTo(x - 30 + i, y - 50 + Math.sin(i)*10);
+            ctx.stroke();
+        } else {
+            ctx.fillStyle = contentColor;
+            ctx.beginPath();
+            ctx.ellipse(x, y - 60, 20, 40, Math.PI/4, 0, Math.PI*2);
+            ctx.fill();
+        }
+        
+        ctx.fillStyle = '#333';
+        if(!gameState.destarch.lightOn && gameState.expStep === 'DESTARCH') ctx.fillStyle = '#ccc'; // lighter text in dark
+        
+        ctx.font = '14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(label, x, y + 20);
+    }
+    
+    function drawDropper(x, y) {
+        ctx.save();
+        ctx.translate(x, y);
+        
+        // Rubber bulb
+        ctx.fillStyle = '#C2185B';
+        ctx.beginPath(); ctx.arc(0, -30, 15, 0, Math.PI*2); ctx.fill();
+        
+        // Glass tube
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.strokeStyle = '#ccc';
+        ctx.beginPath(); ctx.rect(-5, -20, 10, 60); ctx.fill(); ctx.stroke();
+        
+        // Iodine liquid inside
+        ctx.fillStyle = '#E65100'; // Orange/Brown
+        ctx.fillRect(-3, 0, 6, 35);
+        
+        // Drop tip
+        ctx.beginPath(); ctx.moveTo(-5, 40); ctx.lineTo(5, 40); ctx.lineTo(0, 50); ctx.fill();
+        
+        ctx.restore();
+    }
+
+    // --- Main Loop ---
+
+    function animate() {
+        ctx.clearRect(0,0,canvas.width, canvas.height);
+        
+        if (gameState.phase === 'VIEW_DISTANCE') {
+            drawPondView();
+        } else if (gameState.phase === 'SIMULATION') {
+            drawSimulation();
+        } else if (gameState.phase === 'PART2' && gameState.expStep !== 'VARIABLES') {
+            // Draw Experiment Phase (Includes Destarch)
+            drawExperiment();
+        } else if (gameState.phase !== 'INTRO' && gameState.phase !== 'END' && gameState.phase !== 'PART2') {
+            // Microscope View Logic
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(gameState.width/2, gameState.height/2, Math.min(gameState.width, gameState.height)/2 - 20, 0, Math.PI*2);
+            ctx.clip();
+            ctx.fillStyle = '#E3F2FD';
+            ctx.fillRect(0,0,gameState.width, gameState.height);
+            
+            // Grid
+            ctx.strokeStyle = 'rgba(0,0,0,0.05)'; ctx.lineWidth = 1;
+            for(let i=0; i<gameState.width; i+=50) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i, gameState.height); ctx.stroke(); }
+            for(let i=0; i<gameState.height; i+=50) { ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(gameState.width, i); ctx.stroke(); }
+
+            // Draw Algae inside clip
+            drawSpirogyra(gameState.width/2, gameState.height/2);
+            ctx.restore(); // END CLIP
+
+            // 2. Draw UI Elements (Unclipped)
+            if (gameState.phase === 'PART1') drawLabels();
+        }
+        requestAnimationFrame(animate);
+    }
+
+    // Init
+    resize();
+    animate();
+
+</script>
+</body>
+</html>

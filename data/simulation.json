@@ -2,8 +2,8 @@
     {
         "id": "Friction1",
         "category": {
-            "en-US": "JS",
-            "zh-HK": "JS"
+            "en-US": "Junior Science",
+            "zh-HK": "Junior Science"
         },
         "title": {
             "en-US": "Friction",
@@ -16,7 +16,7 @@
         "contributors": [
             "CHAN WAI KIU "
         ],
-        "simulationUrl": "simulations/JS/3a03.html",
+        "simulationUrl": "simulations/Junior Science/3a03.html",
         "screenshotUrl": "screenshots/3a03.png",
         "createdAt": "2026-2-4",
         "updatedAt": "2026-2-4"
@@ -24,8 +24,8 @@
     {
         "id": "Spirogyra1",
         "category": {
-            "en-US": "JS",
-            "zh-HK": "JS"
+            "en-US": "Junior Science",
+            "zh-HK": "Junior Science"
         },
         "title": {
             "en-US": "Spirogyra",
@@ -38,7 +38,7 @@
         "contributors": [
             "MA KA PO"
         ],
-        "simulationUrl": "simulations/JS/3A26.html",
+        "simulationUrl": "simulations/Junior Science/3A26.html",
         "screenshotUrl": "screenshots/3A26.png",
         "createdAt": "2026-2-4",
         "updatedAt": "2026-2-4"
@@ -46,8 +46,8 @@
     {
         "id": "Reflection",
         "category": {
-            "en-US": "JS",
-            "zh-HK": "JS"
+            "en-US": "Junior Science",
+            "zh-HK": "Junior Science"
         },
         "title": {
             "en-US": "Reflection of light",
@@ -60,7 +60,7 @@
         "contributors": [
             "CHOW PUI HAN"
         ],
-        "simulationUrl": "simulations/JS/3B10.html",
+        "simulationUrl": "simulations/Junior Science/3B10.html",
         "screenshotUrl": "screenshots/3B10.png",
         "createdAt": "2026-2-4",
         "updatedAt": "2026-2-4"
@@ -68,8 +68,8 @@
     {
         "id": "Gravity",
         "category": {
-            "en-US": "JS",
-            "zh-HK": "JS"
+            "en-US": "Junior Science",
+            "zh-HK": "Junior Science"
         },
         "title": {
             "en-US": "Gravity of Planet",
@@ -82,7 +82,7 @@
         "contributors": [
             "ZHENG ANDY"
         ],
-        "simulationUrl": "simulations/JS/3d31.html",
+        "simulationUrl": "simulations/Junior Science/3d31.html",
         "screenshotUrl": "screenshots/3d31.png",
         "createdAt": "2026-2-4",
         "updatedAt": "2026-2-4"
@@ -90,8 +90,8 @@
     {
         "id": "Evaporation",
         "category": {
-            "en-US": "JS",
-            "zh-HK": "JS"
+            "en-US": "Junior Science",
+            "zh-HK": "Junior Science"
         },
         "title": {
             "en-US": "Evaporation",
@@ -104,7 +104,7 @@
         "contributors": [
             "LIU HOI KAY"
         ],
-        "simulationUrl": "simulations/JS/3a25.html",
+        "simulationUrl": "simulations/Junior Science/3a25.html",
         "screenshotUrl": "screenshots/3a25.png",
         "createdAt": "2026-2-4",
         "updatedAt": "2026-2-4"
@@ -112,8 +112,8 @@
     {
         "id": "Heat",
         "category": {
-            "en-US": "JS",
-            "zh-HK": "JS"
+            "en-US": "Junior Science",
+            "zh-HK": "Junior Science"
         },
         "title": {
             "en-US": "Heat ransfer",
@@ -126,7 +126,7 @@
         "contributors": [
             "MA LOK YIN"
         ],
-        "simulationUrl": "simulations/JS/3d19.html",
+        "simulationUrl": "simulations/Junior Science/3d19.html",
         "screenshotUrl": "screenshots/3d19.png",
         "createdAt": "2026-2-4",
         "updatedAt": "2026-2-4"
@@ -134,8 +134,8 @@
     {
         "id": "Photosynthesis",
         "category": {
-            "en-US": "JS",
-            "zh-HK": "JS"
+            "en-US": "Junior Science",
+            "zh-HK": "Junior Science"
         },
         "title": {
             "en-US": "Photosynthesis Dash",
@@ -148,7 +148,7 @@
         "contributors": [
             "WANG YUI KAI"
         ],
-        "simulationUrl": "simulations/JS/3d26.html",
+        "simulationUrl": "simulations/Junior Science/3d26.html",
         "screenshotUrl": "screenshots/3d26.png",
         "createdAt": "2026-2-4",
         "updatedAt": "2026-2-4"
@@ -156,8 +156,8 @@
     {
         "id": "Energy",
         "category": {
-            "en-US": "JS",
-            "zh-HK": "JS"
+            "en-US": "Junior Science",
+            "zh-HK": "Junior Science"
         },
         "title": {
             "en-US": "Energy Lab",
@@ -170,7 +170,7 @@
         "contributors": [
             "LAW HO YI"
         ],
-        "simulationUrl": "simulations/JS/3A17.html",
+        "simulationUrl": "simulations/Junior Science/3A17.html",
         "screenshotUrl": "screenshots/3A17.png",
         "createdAt": "2026-2-4",
         "updatedAt": "2026-2-4"
