@@ -160,7 +160,7 @@
             "zh-HK": "JS"
         },
         "title": {
-            "en-US": "Energy Lab"
+            "en-US": "Energy Lab",
             "zh-HK": "Energy Lab"
         },
         "description": {
@@ -175,6 +175,5 @@
         "createdAt": "2026-2-4",
         "updatedAt": "2026-2-4"
     }
-
 
 ] 
