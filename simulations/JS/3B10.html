@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Valtorta College: Optics Lab</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-color: #1e293b;
+            --accent-color: #3b82f6;
+            --text-color: #f8fafc;
+            --success-color: #22c55e;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Sidebar */
+        #sidebar {
+            width: 280px;
+            background-color: var(--panel-color);
+            border-right: 1px solid #334155;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+            z-index: 10;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: var(--accent-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .level-info {
+            background: rgba(0,0,0,0.2);
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #334155;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.1s, background-color 0.2s;
+            flex: 1;
+        }
+
+        button:hover {
+            background-color: #2563eb;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        button.reset-btn {
+            background-color: #ef4444;
+        }
+        
+        button.reset-btn:hover {
+            background-color: #dc2626;
+        }
+
+        .toolbox {
+            flex-grow: 1;
+        }
+
+        .tool-item {
+            background: #334155;
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: grab;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.2s;
+            user-select: none;
+        }
+
+        .tool-item:hover {
+            background: #475569;
+        }
+
+        .tool-icon {
+            width: 30px;
+            height: 30px;
+            background: #000;
+            border-radius: 4px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 12px;
+        }
+
+        .mirror-icon { border: 2px solid #94a3b8; background: linear-gradient(135deg, #334155, #94a3b8); }
+        .lens-icon { border: 2px solid #60a5fa; background: rgba(96, 165, 250, 0.2); border-radius: 50%; }
+        .prism-icon { border: 2px solid #c084fc; background: rgba(192, 132, 252, 0.1); clip-path: polygon(50% 0%, 0% 100%, 100% 100%); width: 30px; height: 26px; }
+        .filter-icon { border: 2px solid #ef4444; background: rgba(239, 68, 68, 0.3); }
+
+        /* Game Area */
+        #game-container {
+            flex-grow: 1;
+            position: relative;
+            background-color: #0f172a;
+            cursor: crosshair;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #overlay {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(30, 41, 59, 0.9);
+            padding: 15px 30px;
+            border-radius: 50px;
+            border: 1px solid var(--accent-color);
+            font-weight: bold;
+            display: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            animation: slideDown 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 100;
+        }
+
+        @keyframes slideDown {
+            from { top: -100px; }
+            to { top: 20px; }
+        }
+
+        .tutorial {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            margin-top: auto;
+            border-top: 1px solid #334155;
+            padding-top: 15px;
+        }
+
+        .key-badge {
+            display: inline-block;
+            background: #475569;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            color: white;
+            margin: 0 2px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar">
+        <h1>🔦 Valtorta College<br><span style="font-size:0.8em; color:#94a3b8">Optics Lab</span></h1>
+        
+        <div class="level-info">
+            <div style="color: #94a3b8; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px;">Current Level</div>
+            <div id="level-title" style="font-size: 1.2rem; font-weight: bold; margin-top: 5px;">1. Reflection</div>
+            <p id="level-desc" style="font-size: 0.9rem; color: #cbd5e1; margin-top: 10px;">Use the mirror to guide the light to the target.</p>
+        </div>
+
+        <div class="controls">
+            <button onclick="game.nextLevel()" id="next-level-btn" style="display:none;">Next Level</button>
+            <button onclick="game.resetLevel()" class="reset-btn">Reset</button>
+        </div>
+
+        <div style="margin-bottom: 10px; font-weight: 600;">Available Tools</div>
+        <div class="toolbox" id="toolbox">
+            <!-- Tools injected by JS -->
+        </div>
+
+        <div class="tutorial">
+            <p><strong>Controls:</strong></p>
+            <p>🖱️ <strong>Drag</strong> tools from list or on canvas.</p>
+            <p><span class="key-badge">Double Click</span> to rotate 45°.</p>
+            <p><span class="key-badge">Shift</span> + Drag to rotate smoothly.</p>
+            <p><span class="key-badge">Right Click</span> to remove.</p>
+        </div>
+    </div>
+
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div id="overlay">🎉 Target Illuminated!</div>
+    </div>
+
+    <script>
+        // --- GEOMETRY & MATH UTILS ---
+        class Vector {
+            constructor(x, y) { this.x = x; this.y = y; }
+            add(v) { return new Vector(this.x + v.x, this.y + v.y); }
+            sub(v) { return new Vector(this.x - v.x, this.y - v.y); }
+            mult(n) { return new Vector(this.x * n, this.y * n); }
+            mag() { return Math.sqrt(this.x * this.x + this.y * this.y); }
+            normalize() { const m = this.mag(); return m === 0 ? new Vector(0,0) : this.mult(1/m); }
+            dot(v) { return this.x * v.x + this.y * v.y; }
+            rotate(angle) {
+                const cos = Math.cos(angle);
+                const sin = Math.sin(angle);
+                return new Vector(this.x * cos - this.y * sin, this.x * sin + this.y * cos);
+            }
+        }
+
+        // --- GAME OBJECTS ---
+        
+        const OBJECT_TYPES = {
+            SOURCE: 'source',
+            WALL: 'wall',
+            MIRROR: 'mirror',
+            GLASS: 'glass',
+            PRISM: 'prism',
+            FILTER: 'filter',
+            TARGET: 'target'
+        };
+
+        const COLORS = {
+            WHITE: {r:255, g:255, b:255},
+            RED: {r:255, g:50, b:50},
+            GREEN: {r:50, g:255, b:50},
+            BLUE: {r:50, g:100, b:255},
+            CYAN: {r:50, g:255, b:255},
+            MAGENTA: {r:255, g:50, b:255},
+            YELLOW: {r:255, g:255, b:50}
+        };
+
+        class GameObject {
+            constructor(type, x, y, w, h, angle = 0, properties = {}) {
+                this.type = type;
+                this.pos = new Vector(x, y);
+                this.w = w;
+                this.h = h;
+                this.angle = angle;
+                this.properties = properties; // color, ior (index of refraction), etc.
+                this.isDragging = false;
+                this.isRotating = false;
+            }
+
+            getBounds() {
+                // Return 4 corner points based on rotation
+                const hw = this.w / 2;
+                const hh = this.h / 2;
+                const corners = [
+                    new Vector(-hw, -hh), new Vector(hw, -hh),
+                    new Vector(hw, hh), new Vector(-hw, hh)
+                ];
+                return corners.map(p => p.rotate(this.angle).add(this.pos));
+            }
+
+            getSegments() {
+                const b = this.getBounds();
+                const segs = [];
+                for(let i=0; i<b.length; i++) {
+                    segs.push({
+                        p1: b[i], 
+                        p2: b[(i+1)%b.length], 
+                        obj: this,
+                        normal: b[(i+1)%b.length].sub(b[i]).rotate(-Math.PI/2).normalize() // simplified normal
+                    });
+                }
+                return segs;
+            }
+
+            contains(point) {
+                // Simple bounding box check for selection, rotating back to axis aligned
+                const local = point.sub(this.pos).rotate(-this.angle);
+                
+                // Use a minimum interaction size so thin objects (mirrors) are easy to grab
+                const minSize = 30; 
+                const hitW = Math.max(this.w, minSize);
+                const hitH = Math.max(this.h, minSize);
+                
+                return Math.abs(local.x) < hitW/2 && Math.abs(local.y) < hitH/2;
+            }
+        }
+
+        // --- PHYSICS ENGINE ---
+
+        class Ray {
+            constructor(origin, dir, color = COLORS.WHITE, intensity = 1.0) {
+                this.origin = origin;
+                this.dir = dir.normalize();
+                this.color = color;
+                this.intensity = intensity;
+                this.path = [origin];
+            }
+        }
+
+        class OpticsEngine {
+            constructor() {
+                this.maxBounces = 100;
+                this.rays = [];
+            }
+
+            cast(sceneObjects, sources) {
+                this.rays = [];
+                
+                // Initialize rays from sources
+                sources.forEach(src => {
+                    const dir = new Vector(1, 0).rotate(src.angle);
+                    const spawnOffset = dir.mult(src.w/2 + 1); // Start just outside source
+                    this.traceRay(src.pos.add(spawnOffset), dir, src.properties.color || COLORS.WHITE, 0);
+                });
+            }
+
+            traceRay(origin, dir, color, depth) {
+                if (depth > this.maxBounces || (color.r < 10 && color.g < 10 && color.b < 10)) return;
+
+                let closest = null;
+                let minDist = Infinity;
+                let hitNormal = null;
+                let hitObj = null;
+
+                // Gather all line segments from all objects
+                // Note: Optimization would be spatial hashing, but N is small here.
+                const segments = [];
+                sceneObjects.forEach(obj => {
+                    if (obj.type === OBJECT_TYPES.SOURCE) return;
+                    if (obj.type === OBJECT_TYPES.TARGET) {
+                        segments.push(...obj.getSegments()); // Targets are physically there but allow light in usually
+                    } else {
+                        segments.push(...obj.getSegments());
+                    }
+                });
+
+                // Ray-Line Intersection
+                for (let seg of segments) {
+                    const p1 = seg.p1;
+                    const p2 = seg.p2;
+                    
+                    const x1 = p1.x, y1 = p1.y, x2 = p2.x, y2 = p2.y;
+                    const x3 = origin.x, y3 = origin.y, x4 = origin.x + dir.x, y4 = origin.y + dir.y;
+
+                    const den = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+                    if (den === 0) continue;
+
+                    const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / den;
+                    const u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / den;
+
+                    if (t > 0.001 && t < 1 && u > 0.001) { // u > small epsilon to prevent self-intersection
+                        const hitPt = new Vector(x1 + t * (x2 - x1), y1 + t * (y2 - y1));
+                        const dist = hitPt.sub(origin).mag();
+                        if (dist < minDist) {
+                            minDist = dist;
+                            closest = hitPt;
+                            hitNormal = seg.normal;
+                            hitObj = seg.obj;
+                        }
+                    }
+                }
+
+                // If hit nothing, go off screen
+                if (!closest) {
+                    closest = origin.add(dir.mult(2000));
+                    this.rays.push({ p1: origin, p2: closest, color: color });
+                    return;
+                }
+
+                // Add segment to draw list
+                this.rays.push({ p1: origin, p2: closest, color: color });
+
+                // Handle Interactions
+                if (hitObj.type === OBJECT_TYPES.WALL) return; // Stop
+
+                if (hitObj.type === OBJECT_TYPES.TARGET) {
+                    hitObj.properties.hit = true;
+                    hitObj.properties.hitColor = color;
+                    return; // Absorb light
+                }
+
+                if (hitObj.type === OBJECT_TYPES.MIRROR) {
+                    // Reflection: R = D - 2(D.N)N
+                    const dot = dir.dot(hitNormal);
+                    const reflectDir = dir.sub(hitNormal.mult(2 * dot));
+                    this.traceRay(closest, reflectDir, color, depth + 1);
+                }
+                else if (hitObj.type === OBJECT_TYPES.GLASS) {
+                    // Refraction (Simplistic Fresnel/Snell)
+                    const n1 = 1.0; // Air
+                    const n2 = 1.5; // Glass
+                    
+                    // Determine if entering or exiting (Normal points OUT)
+                    let normal = hitNormal;
+                    let eta = n1 / n2;
+                    let dot = dir.dot(normal);
+
+                    if (dot > 0) {
+                        // Exiting
+                        normal = normal.mult(-1);
+                        eta = n2 / n1; // Swap indices
+                    }
+
+                    const k = 1 - eta * eta * (1 - dot * dot);
+                    if (k < 0) {
+                        // Total Internal Reflection
+                        const reflectDir = dir.sub(normal.mult(2 * dot));
+                        this.traceRay(closest, reflectDir, color, depth + 1);
+                    } else {
+                        // Refract: T = eta * D + (eta * cos - sqrt(k)) * N
+                        // Simplified vector refraction
+                        // Correct formula: T = eta(D - (N.D)N) - N*sqrt(1 - eta^2(1-(N.D)^2))
+                        // Or easier:
+                        const cosI = -dot; // Because we want normal opposing incident
+                        const sinT2 = eta * eta * (1.0 - cosI * cosI);
+                        if (sinT2 > 1.0) return; // TIR
+                        
+                        const cosT = Math.sqrt(1.0 - sinT2);
+                        // R_refract = eta * I + (eta * cosI - cosT) * N
+                        // Wait, dot is dir.normal. If entering, dot < 0. cosI = -dot.
+                        
+                        // Let's use the explicit components relative to normal for robustness
+                        // Actually, standard vector form:
+                        // Refracted = eta * (v + cos(theta1)*n) - n * cos(theta2)
+                        
+                        // Approximated for game stability:
+                        const refractDir = dir.mult(eta).add(normal.mult(eta * (-dot) - Math.sqrt(k))).normalize();
+                        
+                        // Pass through (nudge origin to avoid self-intersect)
+                        this.traceRay(closest.add(refractDir.mult(0.1)), refractDir, color, depth + 1);
+                    }
+                }
+                else if (hitObj.type === OBJECT_TYPES.PRISM) {
+                    // Dispersion!
+                    // Split into R, G, B with different IORs
+                    // Simplified: We just spawn 3 rays at slightly different angles
+                    // If the ray is White, split. If colored, just refract normally.
+                    
+                    if (color.r === 255 && color.g === 255 && color.b === 255) {
+                        // It's white light, split it
+                        const bases = [
+                            { c: COLORS.RED, ior: 1.3 },
+                            { c: COLORS.GREEN, ior: 1.4 },
+                            { c: COLORS.BLUE, ior: 1.5 }
+                        ];
+
+                        let normal = hitNormal;
+                        let dot = dir.dot(normal);
+                        if (dot > 0) normal = normal.mult(-1); // Fix normal if exiting
+
+                        bases.forEach(base => {
+                            const n1 = 1.0;
+                            const n2 = base.ior;
+                            const eta = n1/n2; // Entering
+                            // NOTE: This logic simplifies entrance. Real prisms refract twice.
+                            // To keep code uniform, we treat the prism object as a refractive object
+                            // where index of refraction depends on wavelength.
+                            
+                            // Re-calculate refraction for this specific color
+                            const k = 1 - eta * eta * (1 - dot * dot);
+                            if (k >= 0) {
+                                const refractDir = dir.mult(eta).add(normal.mult(eta * (-dot) - Math.sqrt(k))).normalize();
+                                this.traceRay(closest.add(refractDir.mult(0.1)), refractDir, base.c, depth + 1);
+                            }
+                        });
+                        return; // Stop the white ray
+                    } else {
+                        // Already colored, just refract standard glass
+                        // (Duplicate Refraction logic but simplified)
+                         const n1 = 1.0; 
+                         const n2 = 1.5;
+                         let normal = hitNormal;
+                         let eta = n1/n2;
+                         let dot = dir.dot(normal);
+                         if (dot > 0) { normal = normal.mult(-1); eta = n2/n1; }
+                         const k = 1 - eta * eta * (1 - dot * dot);
+                         if(k >= 0) {
+                             const refractDir = dir.mult(eta).add(normal.mult(eta * (-dot) - Math.sqrt(k))).normalize();
+                             this.traceRay(closest.add(refractDir.mult(0.1)), refractDir, color, depth + 1);
+                         }
+                    }
+                }
+                else if (hitObj.type === OBJECT_TYPES.FILTER) {
+                    // Only pass specific color
+                    const filterColor = hitObj.properties.color;
+                    
+                    // Logic: If white, become filter color. If matches filter, pass. Else block.
+                    let newColor = null;
+                    
+                    if (color.r === 255 && color.g === 255 && color.b === 255) {
+                        newColor = filterColor;
+                    } else if (color.r === filterColor.r && color.g === filterColor.g && color.b === filterColor.b) {
+                        newColor = color;
+                    }
+
+                    if (newColor) {
+                         this.traceRay(closest.add(dir.mult(2)), dir, newColor, depth + 1); // Pass through
+                    }
+                }
+            }
+        }
+
+        // --- GAME LOGIC ---
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const engine = new OpticsEngine();
+        let sceneObjects = [];
+        let sources = [];
+        let level = 0;
+        let isDrag = false;
+        let dragObj = null;
+        let lastMouse = new Vector(0,0);
+        let winState = false;
+
+        // Level Definitions
+        const levels = [
+            {
+                title: "Reflection 101",
+                desc: "Light travels in straight lines. Use the mirror to bounce the beam around the wall to the target.",
+                setup: () => {
+                    sceneObjects = [];
+                    sources = [];
+                    // Source
+                    sources.push(new GameObject(OBJECT_TYPES.SOURCE, 100, 300, 40, 40, 0, {color: COLORS.WHITE}));
+                    // Obstacle Wall
+                    sceneObjects.push(new GameObject(OBJECT_TYPES.WALL, 400, 300, 20, 300, 0));
+                    // Target
+                    sceneObjects.push(new GameObject(OBJECT_TYPES.TARGET, 700, 500, 40, 40, 0, {reqColor: 'any'}));
+                    
+                    // Inventory for this level
+                    return [OBJECT_TYPES.MIRROR];
+                }
+            },
+            {
+                title: "Refraction Action",
+                desc: "Glass bends light (Refraction). Guide the light through the tunnel using the glass block to shift its path.",
+                setup: () => {
+                    sceneObjects = [];
+                    sources = [];
+                    sources.push(new GameObject(OBJECT_TYPES.SOURCE, 100, 200, 40, 40, 0.2, {color: COLORS.WHITE}));
+                    
+                    // A narrow tunnel
+                    sceneObjects.push(new GameObject(OBJECT_TYPES.WALL, 400, 100, 20, 200, 0));
+                    sceneObjects.push(new GameObject(OBJECT_TYPES.WALL, 400, 500, 20, 200, 0));
+                    
+                    // Target offset
+                    sceneObjects.push(new GameObject(OBJECT_TYPES.TARGET, 700, 350, 40, 40, 0, {reqColor: 'any'}));
+
+                    return [OBJECT_TYPES.GLASS, OBJECT_TYPES.MIRROR];
+                }
+            },
+            {
+                title: "The Prism",
+                desc: "White light contains all colors. Use the prism to split the beam and hit the RED target with RED light.",
+                setup: () => {
+                    sceneObjects = [];
+                    sources = [];
+                    sources.push(new GameObject(OBJECT_TYPES.SOURCE, 100, 300, 40, 40, 0, {color: COLORS.WHITE}));
+                    
+                    // Target specifically wants red
+                    sceneObjects.push(new GameObject(OBJECT_TYPES.TARGET, 700, 200, 40, 40, 0, {reqColor: COLORS.RED}));
+                    
+                    return [OBJECT_TYPES.PRISM, OBJECT_TYPES.MIRROR];
+                }
+            },
+            {
+                title: "Sandbox Mode",
+                desc: "Experiment freely! Create your own optical systems.",
+                setup: () => {
+                    sceneObjects = [];
+                    sources = [];
+                    sources.push(new GameObject(OBJECT_TYPES.SOURCE, 100, 300, 40, 40, 0, {color: COLORS.WHITE}));
+                    return [OBJECT_TYPES.MIRROR, OBJECT_TYPES.GLASS, OBJECT_TYPES.PRISM, OBJECT_TYPES.FILTER];
+                }
+            }
+        ];
+
+        const game = {
+            init: () => {
+                window.addEventListener('resize', game.resize);
+                game.resize();
+                
+                // Input Listeners
+                canvas.addEventListener('mousedown', game.handleInputStart);
+                canvas.addEventListener('mousemove', game.handleInputMove);
+                window.addEventListener('mouseup', game.handleInputEnd);
+                canvas.addEventListener('dblclick', game.handleDoubleClick);
+                canvas.addEventListener('contextmenu', (e) => { e.preventDefault(); game.handleRightClick(e); });
+
+                game.loadLevel(0);
+                requestAnimationFrame(game.loop);
+            },
+
+            resize: () => {
+                canvas.width = canvas.parentElement.clientWidth;
+                canvas.height = canvas.parentElement.clientHeight;
+            },
+
+            loadLevel: (idx) => {
+                level = idx;
+                winState = false;
+                document.getElementById('overlay').style.display = 'none';
+                document.getElementById('next-level-btn').style.display = 'none';
+                document.getElementById('level-title').innerText = `${idx + 1}. ${levels[idx].title}`;
+                document.getElementById('level-desc').innerText = levels[idx].desc;
+
+                const inventory = levels[idx].setup();
+                game.buildToolbox(inventory);
+            },
+
+            resetLevel: () => {
+                game.loadLevel(level);
+            },
+
+            nextLevel: () => {
+                if (level < levels.length - 1) {
+                    game.loadLevel(level + 1);
+                }
+            },
+
+            buildToolbox: (items) => {
+                const toolbox = document.getElementById('toolbox');
+                toolbox.innerHTML = '';
+                
+                items.forEach(type => {
+                    const el = document.createElement('div');
+                    el.className = 'tool-item';
+                    
+                    let iconHtml = '';
+                    let label = '';
+                    if(type === OBJECT_TYPES.MIRROR) { iconHtml = '<div class="tool-icon mirror-icon"></div>'; label = "Mirror"; }
+                    if(type === OBJECT_TYPES.GLASS) { iconHtml = '<div class="tool-icon lens-icon" style="border-radius:2px; background:rgba(200,230,255,0.3)"></div>'; label = "Glass Block"; }
+                    if(type === OBJECT_TYPES.PRISM) { iconHtml = '<div class="tool-icon prism-icon"></div>'; label = "Prism"; }
+                    if(type === OBJECT_TYPES.FILTER) { iconHtml = '<div class="tool-icon filter-icon"></div>'; label = "Red Filter"; }
+
+                    el.innerHTML = `${iconHtml}<span>${label}</span>`;
+                    el.draggable = true;
+                    
+                    el.addEventListener('dragend', (e) => {
+                        const rect = canvas.getBoundingClientRect();
+                        const x = e.clientX - rect.left;
+                        const y = e.clientY - rect.top;
+                        
+                        if (x > 0 && x < canvas.width && y > 0 && y < canvas.height) {
+                            game.spawnObject(type, x, y);
+                            // el.remove(); // Removed this line to allow unlimited items
+                        }
+                    });
+
+                    toolbox.appendChild(el);
+                });
+            },
+
+            spawnObject: (type, x, y) => {
+                let w=60, h=10;
+                let props = {};
+                if (type === OBJECT_TYPES.MIRROR) { w=80; h=5; }
+                if (type === OBJECT_TYPES.GLASS) { w=80; h=50; }
+                if (type === OBJECT_TYPES.PRISM) { w=60; h=60; } // Render as triangle later
+                if (type === OBJECT_TYPES.FILTER) { w=80; h=5; props.color = COLORS.RED; }
+                
+                sceneObjects.push(new GameObject(type, x, y, w, h, 0, props));
+            },
+
+            handleInputStart: (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const m = new Vector(e.clientX - rect.left, e.clientY - rect.top);
+                lastMouse = m;
+
+                // Check clicks
+                // Prioritize handles later, for now check object bodies
+                // Check in reverse draw order
+                for(let i = sceneObjects.length-1; i>=0; i--) {
+                    if(sceneObjects[i].type === OBJECT_TYPES.WALL || sceneObjects[i].type === OBJECT_TYPES.TARGET) continue;
+                    
+                    if(sceneObjects[i].contains(m)) {
+                        isDrag = true;
+                        dragObj = sceneObjects[i];
+                        return;
+                    }
+                }
+                
+                // Sources also moveable in sandbox
+                if (level === 3) {
+                     for(let i = sources.length-1; i>=0; i--) {
+                        if(sources[i].contains(m)) {
+                            isDrag = true;
+                            dragObj = sources[i];
+                            return;
+                        }
+                    }
+                }
+            },
+
+            handleInputMove: (e) => {
+                if (!isDrag || !dragObj) return;
+                const rect = canvas.getBoundingClientRect();
+                const m = new Vector(e.clientX - rect.left, e.clientY - rect.top);
+                
+                if (e.shiftKey) {
+                    // Rotate mode
+                    const deltaY = m.y - lastMouse.y;
+                    dragObj.angle += deltaY * 0.01;
+                } else {
+                    // Move mode
+                    const delta = m.sub(lastMouse);
+                    dragObj.pos = dragObj.pos.add(delta);
+                }
+                lastMouse = m;
+            },
+
+            handleInputEnd: () => {
+                isDrag = false;
+                dragObj = null;
+            },
+
+            handleDoubleClick: (e) => {
+                 const rect = canvas.getBoundingClientRect();
+                 const m = new Vector(e.clientX - rect.left, e.clientY - rect.top);
+                 for(let i = sceneObjects.length-1; i>=0; i--) {
+                    if(sceneObjects[i].contains(m) && sceneObjects[i].type !== OBJECT_TYPES.WALL) {
+                        sceneObjects[i].angle += Math.PI / 4; // 45 degrees
+                        return;
+                    }
+                }
+            },
+
+            handleRightClick: (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const m = new Vector(e.clientX - rect.left, e.clientY - rect.top);
+                
+                // Remove object and return to inventory logic (simplified: just delete)
+                // In a full game, we'd add it back to the HTML list.
+                // For this demo: simply delete, user can Reset if they run out.
+                for(let i = sceneObjects.length-1; i>=0; i--) {
+                    if(sceneObjects[i].contains(m) && sceneObjects[i].type !== OBJECT_TYPES.WALL && sceneObjects[i].type !== OBJECT_TYPES.TARGET) {
+                        sceneObjects.splice(i, 1);
+                        return;
+                    }
+                }
+            },
+
+            checkWinCondition: () => {
+                // Check targets
+                let allHit = true;
+                let targetsFound = false;
+                
+                sceneObjects.forEach(obj => {
+                    if (obj.type === OBJECT_TYPES.TARGET) {
+                        targetsFound = true;
+                        if (!obj.properties.hit) allHit = false;
+                        else {
+                            // Check Color Requirement
+                            if (obj.properties.reqColor !== 'any') {
+                                const req = obj.properties.reqColor;
+                                const hitC = obj.properties.hitColor;
+                                // Simple distance check for color matching
+                                const diff = Math.abs(req.r - hitC.r) + Math.abs(req.g - hitC.g) + Math.abs(req.b - hitC.b);
+                                if (diff > 50) allHit = false;
+                            }
+                        }
+                    }
+                });
+
+                if (targetsFound && allHit && !winState) {
+                    winState = true;
+                    document.getElementById('overlay').style.display = 'block';
+                    if (level < levels.length - 1) {
+                        document.getElementById('next-level-btn').style.display = 'inline-block';
+                    }
+                }
+            },
+
+            loop: () => {
+                // 1. Update Physics
+                sceneObjects.forEach(o => {
+                    if(o.type === OBJECT_TYPES.TARGET) o.properties.hit = false;
+                });
+                
+                engine.cast(sceneObjects, sources);
+                game.checkWinCondition();
+
+                // 2. Clear
+                ctx.fillStyle = '#0f172a';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // 3. Draw Rays (Glow effect)
+                ctx.save();
+                ctx.globalCompositeOperation = 'screen';
+                ctx.lineWidth = 3;
+                engine.rays.forEach(r => {
+                    ctx.beginPath();
+                    ctx.moveTo(r.p1.x, r.p1.y);
+                    ctx.lineTo(r.p2.x, r.p2.y);
+                    ctx.strokeStyle = `rgba(${r.color.r},${r.color.g},${r.color.b}, 0.1)`;
+                    ctx.stroke();
+                });
+                // Main Beam
+                ctx.lineWidth = 1.5;
+                engine.rays.forEach(r => {
+                    ctx.beginPath();
+                    ctx.moveTo(r.p1.x, r.p1.y);
+                    ctx.lineTo(r.p2.x, r.p2.y);
+                    ctx.strokeStyle = `rgba(${r.color.r},${r.color.g},${r.color.b}, 0.8)`;
+                    ctx.stroke();
+                });
+                ctx.restore();
+
+                // 4. Draw Objects
+                const drawObj = (o) => {
+                    ctx.save();
+                    ctx.translate(o.pos.x, o.pos.y);
+                    ctx.rotate(o.angle);
+
+                    // Selection highlight
+                    if(o === dragObj) {
+                        ctx.shadowBlur = 10;
+                        ctx.shadowColor = 'white';
+                    }
+
+                    if (o.type === OBJECT_TYPES.SOURCE) {
+                        ctx.fillStyle = '#333';
+                        ctx.fillRect(-o.w/2, -o.h/2, o.w, o.h);
+                        // Emitter tip
+                        ctx.fillStyle = `rgb(${o.properties.color.r},${o.properties.color.g},${o.properties.color.b})`;
+                        ctx.fillRect(o.w/2 - 5, -5, 5, 10);
+                    }
+                    else if (o.type === OBJECT_TYPES.MIRROR) {
+                        ctx.fillStyle = '#94a3b8';
+                        ctx.fillRect(-o.w/2, -o.h/2, o.w, o.h);
+                        // Reflective surface indicator
+                        ctx.fillStyle = '#e2e8f0';
+                        ctx.fillRect(-o.w/2, -o.h/2, o.w, 2); 
+                    }
+                    else if (o.type === OBJECT_TYPES.WALL) {
+                        ctx.fillStyle = '#1e293b';
+                        ctx.strokeStyle = '#334155';
+                        ctx.lineWidth = 2;
+                        ctx.fillRect(-o.w/2, -o.h/2, o.w, o.h);
+                        ctx.strokeRect(-o.w/2, -o.h/2, o.w, o.h);
+                    }
+                    else if (o.type === OBJECT_TYPES.GLASS) {
+                        ctx.fillStyle = 'rgba(200, 230, 255, 0.2)';
+                        ctx.strokeStyle = 'rgba(200, 230, 255, 0.5)';
+                        ctx.fillRect(-o.w/2, -o.h/2, o.w, o.h);
+                        ctx.strokeRect(-o.w/2, -o.h/2, o.w, o.h);
+                    }
+                    else if (o.type === OBJECT_TYPES.PRISM) {
+                        // Draw Triangle
+                        ctx.fillStyle = 'rgba(200, 200, 255, 0.15)';
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                        ctx.beginPath();
+                        // Equilateral-ish triangle fitting in w/h box
+                        // Bounds logic used rectangles, but we can draw a triangle visually
+                        // Note: Physics currently uses the bounding box for prisms for simplicity
+                        // To match physics:
+                        ctx.moveTo(-o.w/2, -o.h/2);
+                        ctx.lineTo(o.w/2, -o.h/2);
+                        ctx.lineTo(-o.w/2, o.h/2); // Right triangle for prism usually
+                        ctx.closePath();
+                        // Actually, let's just draw the rect to match physics engine bounds for clarity
+                        // Or fix physics. For this demo, let's keep visual matching physics box
+                        ctx.fillRect(-o.w/2, -o.h/2, o.w, o.h);
+                        ctx.strokeRect(-o.w/2, -o.h/2, o.w, o.h);
+                        
+                        // Prism icon inside
+                        ctx.beginPath();
+                        ctx.moveTo(-10, 10);
+                        ctx.lineTo(0, -10);
+                        ctx.lineTo(10, 10);
+                        ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+                        ctx.stroke();
+                    }
+                    else if (o.type === OBJECT_TYPES.FILTER) {
+                        const c = o.properties.color;
+                        ctx.fillStyle = `rgba(${c.r}, ${c.g}, ${c.b}, 0.4)`;
+                        ctx.strokeStyle = `rgba(${c.r}, ${c.g}, ${c.b}, 1)`;
+                        ctx.fillRect(-o.w/2, -o.h/2, o.w, o.h);
+                        ctx.strokeRect(-o.w/2, -o.h/2, o.w, o.h);
+                    }
+                    else if (o.type === OBJECT_TYPES.TARGET) {
+                        ctx.fillStyle = '#000';
+                        ctx.beginPath();
+                        ctx.arc(0, 0, 15, 0, Math.PI*2);
+                        ctx.fill();
+                        
+                        // Glow based on hit
+                        if (o.properties.hit) {
+                            const c = o.properties.hitColor;
+                            ctx.shadowBlur = 20;
+                            ctx.shadowColor = `rgb(${c.r},${c.g},${c.b})`;
+                            ctx.fillStyle = `rgb(${c.r},${c.g},${c.b})`;
+                        } else {
+                             ctx.fillStyle = '#333';
+                             if (o.properties.reqColor !== 'any') {
+                                 const c = o.properties.reqColor;
+                                 ctx.strokeStyle = `rgb(${c.r},${c.g},${c.b})`;
+                                 ctx.lineWidth = 2;
+                                 ctx.stroke();
+                             }
+                        }
+                        
+                        ctx.beginPath();
+                        ctx.arc(0, 0, 8, 0, Math.PI*2);
+                        ctx.fill();
+                    }
+
+                    ctx.restore();
+                };
+
+                // Draw objects
+                [...sources, ...sceneObjects].forEach(drawObj);
+
+                requestAnimationFrame(game.loop);
+            }
+        };
+
+        window.onload = game.init;
+
+    </script>
+</body>
+</html>

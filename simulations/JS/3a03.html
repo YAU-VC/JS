@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Valtorta College Friction Lab</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        canvas {
+            touch-action: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useCallback } = React;
+
+        // --- Icons as Components ---
+        const IconSquare = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                <rect width="18" height="18" x="3" y="3" rx="2" />
+            </svg>
+        );
+
+        const IconArrowRight = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                <path d="M5 12h14" />
+                <path d="m12 5 7 7-7 7" />
+            </svg>
+        );
+
+        const IconRefreshCw = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                <path d="M21 3v5h-5" />
+                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                <path d="M8 16H3v5" />
+            </svg>
+        );
+
+        const IconPlay = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                <polygon points="6 3 20 12 6 21 6 3" />
+            </svg>
+        );
+
+        // --- Main Component ---
+        const FrictionLab = () => {
+            // Game State
+            const [gameState, setGameState] = useState('idle'); // idle, moving, stopped, won
+            const [surface, setSurface] = useState('wood');
+            const [mass, setMass] = useState(50); // kg
+            const [appliedForce, setAppliedForce] = useState(500); // Newtons
+            const [velocity, setVelocity] = useState(0);
+            const [distance, setDistance] = useState(0);
+            const [message, setMessage] = useState("Adjust settings and push the crate to the target!");
+            
+            // Canvas Refs
+            const canvasRef = useRef(null);
+            const requestRef = useRef(null);
+            
+            // Physics Constants
+            const GRAVITY = 9.8;
+            const PIXELS_PER_METER = 10; // Scale
+            
+            // Surface Properties (Coefficient of Kinetic Friction)
+            const surfaces = {
+                ice: { mu: 0.05, name: 'Ice', color: '#e0f7fa', texture: '❄️' },
+                wood: { mu: 0.4, name: 'Wood Floor', color: '#deb887', texture: '🪵' },
+                concrete: { mu: 0.7, name: 'Concrete', color: '#9ca3af', texture: '🧱' },
+                sandpaper: { mu: 1.2, name: 'Sandpaper', color: '#3f2e18', texture: 'Rough' }
+            };
+
+            // Mutable state for the animation loop
+            const physicsState = useRef({
+                x: 50, // starting pixel position
+                v: 0,  // velocity m/s
+                isPushing: false,
+                pushDuration: 0,
+                frictionForce: 0,
+                targetX: 600, // Target position
+                targetWidth: 100
+            });
+
+            // Reset Game
+            const resetGame = () => {
+                setGameState('idle');
+                setVelocity(0);
+                setDistance(0);
+                setMessage("Ready to test.");
+                
+                physicsState.current = {
+                    ...physicsState.current,
+                    x: 50,
+                    v: 0,
+                    isPushing: false,
+                    pushDuration: 0,
+                };
+                
+                // Randomize target distance slightly for replayability
+                physicsState.current.targetX = 400 + Math.random() * 300;
+            };
+
+            // Launch/Push Logic
+            const applyPush = () => {
+                if (gameState === 'moving') return;
+                
+                setGameState('moving');
+                setMessage("Sliding...");
+                physicsState.current.isPushing = true;
+                physicsState.current.pushDuration = 10; // Frames to apply force
+                
+                if (requestRef.current) cancelAnimationFrame(requestRef.current);
+                requestRef.current = requestAnimationFrame(animate);
+            };
+
+            // The Physics Loop
+            const animate = useCallback(() => {
+                const state = physicsState.current;
+                const mu = surfaces[surface].mu;
+                
+                // 1. Calculate Forces
+                // Normal Force N = mg
+                const normalForce = mass * GRAVITY;
+                
+                // Kinetic Friction f_k = mu * N
+                const frictionForce = mu * normalForce;
+                state.frictionForce = frictionForce;
+
+                // Net Force
+                let netForce = 0;
+                
+                // Apply "Push" force for a short duration (impulse simulation)
+                if (state.isPushing && state.pushDuration > 0) {
+                    netForce += appliedForce * 5; // Multiplier to make the game feel responsive
+                    state.pushDuration--;
+                } else {
+                    state.isPushing = false;
+                }
+
+                // Apply Friction (always opposite to velocity)
+                if (state.v > 0) {
+                    netForce -= frictionForce;
+                } else if (state.v < 0) {
+                    netForce += frictionForce; // Shouldn't happen in this 1D demo but good practice
+                }
+
+                // 2. Newton's Second Law: F = ma  ->  a = F/m
+                const acceleration = netForce / mass;
+
+                // 3. Update Velocity: v = v + at
+                // Using a fixed time step of approx 1/60th second
+                const dt = 1/60; 
+                state.v += acceleration * dt;
+
+                // 4. Stop Condition (Friction Stop)
+                if (!state.isPushing && state.v < 0.1) {
+                    state.v = 0;
+                    setGameState('stopped');
+                    
+                    // Check Win Condition
+                    const boxCenter = state.x + 25; // Box is 50px wide
+                    const targetStart = state.targetX;
+                    const targetEnd = state.targetX + state.targetWidth;
+                    
+                    if (boxCenter >= targetStart && boxCenter <= targetEnd) {
+                        setGameState('won');
+                        setMessage("🎉 Perfect Stop! Friction did its job.");
+                    } else if (boxCenter < targetStart) {
+                        setMessage("Stopped too short! Need more force or less friction.");
+                    } else {
+                        setMessage("Overshot! Too much force or not enough friction.");
+                    }
+                    
+                    cancelAnimationFrame(requestRef.current);
+                    // Force one last render to ensure UI updates
+                    drawScene();
+                    return; 
+                }
+
+                // 5. Update Position: x = x + vt
+                // Convert meters to pixels for rendering
+                state.x += (state.v * PIXELS_PER_METER);
+
+                // Update React State for UI (throttled slightly in a real app, but fine here)
+                setVelocity(Math.abs(state.v).toFixed(1));
+                setDistance(((state.x - 50) / PIXELS_PER_METER).toFixed(1));
+
+                drawScene();
+                requestRef.current = requestAnimationFrame(animate);
+            }, [mass, appliedForce, surface]);
+
+            // Drawing Logic
+            const drawScene = () => {
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                const width = canvas.width;
+                const height = canvas.height;
+                const state = physicsState.current;
+
+                // Clear Screen
+                ctx.clearRect(0, 0, width, height);
+
+                // Draw Sky/Background
+                ctx.fillStyle = '#f0f9ff';
+                ctx.fillRect(0, 0, width, height - 100);
+
+                // Draw Surface (Ground)
+                ctx.fillStyle = surfaces[surface].color;
+                ctx.fillRect(0, height - 100, width, 100);
+                
+                // Draw Surface Texture Hints
+                ctx.fillStyle = 'rgba(0,0,0,0.1)';
+                for(let i=0; i<width; i+=40) {
+                    if(surface === 'wood') ctx.fillRect(i, height-100, 2, 100);
+                    if(surface === 'concrete') ctx.fillRect(i + Math.random()*10, height-100+Math.random()*100, 4, 4);
+                }
+
+                // Draw Target Zone
+                ctx.fillStyle = 'rgba(34, 197, 94, 0.3)'; // Green transparent
+                ctx.fillRect(state.targetX, height - 110, state.targetWidth, 10);
+                ctx.fillStyle = '#15803d';
+                ctx.font = '12px sans-serif';
+                ctx.fillText("TARGET ZONE", state.targetX + 10, height - 115);
+
+                // Draw Measurements (Ruler)
+                ctx.strokeStyle = '#94a3b8';
+                ctx.beginPath();
+                ctx.moveTo(50, height - 80);
+                ctx.lineTo(width, height - 80);
+                ctx.stroke();
+                for(let i=50; i<width; i+=PIXELS_PER_METER * 5) {
+                    ctx.fillRect(i, height-85, 1, 10);
+                }
+
+                // Draw The Crate
+                const boxSize = 50;
+                const boxY = height - 100 - boxSize;
+                
+                // Shadow
+                ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                ctx.fillRect(state.x + 5, boxY + boxSize - 5, boxSize - 10, 5);
+
+                // Box Body
+                ctx.fillStyle = '#d97706'; // Amber-600
+                ctx.strokeStyle = '#92400e';
+                ctx.lineWidth = 2;
+                ctx.fillRect(state.x, boxY, boxSize, boxSize);
+                ctx.strokeRect(state.x, boxY, boxSize, boxSize);
+                
+                // Box "X" pattern
+                ctx.beginPath();
+                ctx.moveTo(state.x, boxY);
+                ctx.lineTo(state.x + boxSize, boxY + boxSize);
+                ctx.moveTo(state.x + boxSize, boxY);
+                ctx.lineTo(state.x, boxY + boxSize);
+                ctx.stroke();
+
+                // Draw Force Vectors (Arrows)
+                const arrowY = boxY + boxSize / 2;
+                
+                // 1. Applied Force Vector (Green) - Only visible when pushing
+                if (state.isPushing) {
+                    const forceLength = appliedForce / 10;
+                    drawArrow(ctx, state.x + boxSize, arrowY, forceLength, '#22c55e', 'Applied Force');
+                }
+
+                // 2. Friction Vector (Red) - Visible when moving
+                if (state.v > 0.1) {
+                    // Scale visual length based on friction magnitude
+                    const frictionLen = (surfaces[surface].mu * mass * GRAVITY) / 5; 
+                    drawArrow(ctx, state.x, arrowY, -frictionLen, '#ef4444', 'Friction');
+                }
+            };
+
+            const drawArrow = (ctx, x, y, length, color, label) => {
+                ctx.strokeStyle = color;
+                ctx.fillStyle = color;
+                ctx.lineWidth = 4;
+                
+                const headLen = 10;
+                const endX = x + length;
+                
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(endX, y);
+                ctx.stroke();
+
+                // Arrowhead
+                const angle = Math.atan2(0, length);
+                ctx.beginPath();
+                ctx.moveTo(endX, y);
+                ctx.lineTo(endX - headLen * Math.cos(angle - Math.PI / 6), y - headLen * Math.sin(angle - Math.PI / 6));
+                ctx.lineTo(endX - headLen * Math.cos(angle + Math.PI / 6), y - headLen * Math.sin(angle + Math.PI / 6));
+                ctx.fill();
+
+                // Label
+                ctx.font = 'bold 12px sans-serif';
+                ctx.fillText(label, x + (length/2) - 20, y - 10);
+            };
+
+            // Initial Render
+            useEffect(() => {
+                drawScene();
+                window.addEventListener('resize', drawScene);
+                return () => window.removeEventListener('resize', drawScene);
+            }, [surface, mass, appliedForce]); // Redraw when settings change
+
+            return (
+                <div className="flex flex-col items-center w-full min-h-screen bg-slate-50 p-4 font-sans text-slate-800">
+                
+                {/* Header */}
+                <div className="max-w-4xl w-full mb-6">
+                    <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-2">
+                    <IconSquare className="w-8 h-8 text-amber-600 fill-amber-600" />
+                    Valtorta College Friction Lab
+                    </h1>
+                    <p className="text-slate-600 mt-2">
+                    Experiment with forces and surfaces. Try to stop the crate exactly in the green zone!
+                    </p>
+                </div>
+
+                {/* Main Game Area */}
+                <div className="relative w-full max-w-4xl bg-white rounded-xl shadow-xl overflow-hidden border border-slate-200">
+                    
+                    {/* Canvas Layer */}
+                    <canvas 
+                    ref={canvasRef} 
+                    width={800} 
+                    height={350}
+                    className="w-full bg-slate-50 cursor-crosshair"
+                    />
+
+                    {/* Live Physics HUD */}
+                    <div className="absolute top-4 left-4 bg-white/90 backdrop-blur p-3 rounded-lg shadow-sm border border-slate-200 text-sm">
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                        <span className="text-slate-500">Velocity:</span>
+                        <span className="font-mono font-bold">{velocity} m/s</span>
+                        <span className="text-slate-500">Distance:</span>
+                        <span className="font-mono font-bold">{distance} m</span>
+                        <span className="text-red-500 font-medium">Friction Force:</span>
+                        <span className="font-mono font-bold text-red-600">
+                        {gameState !== 'idle' ? (surfaces[surface].mu * mass * GRAVITY).toFixed(1) : 0} N
+                        </span>
+                    </div>
+                    </div>
+
+                    {/* Status Message Overlay */}
+                    <div className="absolute top-4 right-4 max-w-xs text-right">
+                    <div className={`inline-block px-4 py-2 rounded-full font-bold shadow-sm ${
+                        gameState === 'won' ? 'bg-green-100 text-green-700' : 
+                        gameState === 'stopped' ? 'bg-slate-100 text-slate-700' :
+                        gameState === 'moving' ? 'bg-blue-100 text-blue-700' :
+                        'bg-amber-100 text-amber-800'
+                    }`}>
+                        {message}
+                    </div>
+                    </div>
+
+                </div>
+
+                {/* Controls Dashboard */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl mt-6">
+                    
+                    {/* Variable 1: Surface */}
+                    <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <div className="flex items-center gap-2 mb-3 text-slate-700 font-semibold">
+                        <span className="text-xl">1</span>
+                        <h3>Surface Material</h3>
+                    </div>
+                    <div className="space-y-2">
+                        {Object.keys(surfaces).map((key) => (
+                        <button
+                            key={key}
+                            disabled={gameState === 'moving'}
+                            onClick={() => setSurface(key)}
+                            className={`w-full text-left px-4 py-2 rounded-lg transition-all flex justify-between items-center ${
+                            surface === key 
+                                ? 'bg-blue-600 text-white shadow-md' 
+                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            }`}
+                        >
+                            <span>{surfaces[key].texture} {surfaces[key].name}</span>
+                            <span className="text-xs opacity-80 font-mono">μ = {surfaces[key].mu}</span>
+                        </button>
+                        ))}
+                    </div>
+                    <p className="text-xs text-slate-500 mt-3 leading-relaxed">
+                        <strong>Coefficient of Friction (μ):</strong> Higher values mean rougher surfaces, creating more friction force.
+                    </p>
+                    </div>
+
+                    {/* Variable 2: Object Properties */}
+                    <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <div className="flex items-center gap-2 mb-3 text-slate-700 font-semibold">
+                        <span className="text-xl">2</span>
+                        <h3>Mass & Force</h3>
+                    </div>
+                    
+                    <div className="space-y-6">
+                        <div>
+                        <div className="flex justify-between text-sm mb-1">
+                            <span className="text-slate-600">Crate Mass</span>
+                            <span className="font-bold text-slate-900">{mass} kg</span>
+                        </div>
+                        <input 
+                            type="range" 
+                            min="10" max="100" step="5"
+                            value={mass}
+                            disabled={gameState === 'moving'}
+                            onChange={(e) => setMass(Number(e.target.value))}
+                            className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                        />
+                        </div>
+
+                        <div>
+                        <div className="flex justify-between text-sm mb-1">
+                            <span className="text-green-600 font-bold">Applied Push Force</span>
+                            <span className="font-bold text-green-700">{appliedForce} N</span>
+                        </div>
+                        <input 
+                            type="range" 
+                            min="100" max="2000" step="50"
+                            value={appliedForce}
+                            disabled={gameState === 'moving'}
+                            onChange={(e) => setAppliedForce(Number(e.target.value))}
+                            className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-green-600"
+                        />
+                        </div>
+                    </div>
+
+                    <div className="mt-4 p-3 bg-slate-50 rounded text-xs text-slate-500 border border-slate-100">
+                        <p><strong>Friction Formula:</strong> <span className="font-mono">F = μ × Normal Force</span></p>
+                        <p className="mt-1">Increasing mass increases Normal Force, which increases Friction.</p>
+                    </div>
+                    </div>
+
+                    {/* Action Panel */}
+                    <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                    <div>
+                        <div className="flex items-center gap-2 mb-3 text-slate-700 font-semibold">
+                        <span className="text-xl">3</span>
+                        <h3>Simulation Control</h3>
+                        </div>
+                        <p className="text-sm text-slate-500 mb-4">
+                        Configure your variables and apply force to see if you can land in the zone.
+                        </p>
+                    </div>
+
+                    <div className="space-y-3">
+                        {gameState === 'idle' || gameState === 'stopped' || gameState === 'won' ? (
+                            <>
+                            <button
+                                onClick={applyPush}
+                                className="w-full py-4 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-green-200 transition-all flex items-center justify-center gap-2"
+                            >
+                                <IconArrowRight className="w-5 h-5" /> PUSH CRATE
+                            </button>
+                            {gameState !== 'idle' && (
+                                <button
+                                onClick={resetGame}
+                                className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                                >
+                                <IconRefreshCw className="w-4 h-4" /> Reset Position
+                                </button>
+                            )}
+                            </>
+                        ) : (
+                        <button
+                            disabled
+                            className="w-full py-4 bg-slate-100 text-slate-400 rounded-xl font-bold text-lg cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                            <IconPlay className="w-5 h-5 animate-pulse" /> Simulating...
+                        </button>
+                        )}
+                    </div>
+                    </div>
+                </div>
+
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<FrictionLab />);
+    </script>
+</body>
+</html>

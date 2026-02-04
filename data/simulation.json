@@ -16,8 +16,8 @@
         "contributors": [
             "CHAN WAI KIU "
         ],
-        "simulationUrl": "simulations/JS/3a03_Friction.html",
-        "screenshotUrl": "screenshots/3a03_Friction.png",
+        "simulationUrl": "simulations/JS/3a03.html",
+        "screenshotUrl": "screenshots/3a03.png",
         "createdAt": "2026-2-4",
         "updatedAt": "2026-2-4"
     },
@@ -38,8 +38,8 @@
         "contributors": [
             "MA KA PO"
         ],
-        "simulationUrl": "simulations/JS/3A26_Spirogyra.html",
-        "screenshotUrl": "screenshots/3A26_Spirogyra.png",
+        "simulationUrl": "simulations/JS/3A26.html",
+        "screenshotUrl": "screenshots/3A26.png",
         "createdAt": "2026-2-4",
         "updatedAt": "2026-2-4"
     },
@@ -60,13 +60,13 @@
         "contributors": [
             "CHOW PUI HAN"
         ],
-        "simulationUrl": "simulations/JS/3B10_Reflection_of light.html",
-        "screenshotUrl": "screenshots/3B10_Reflection_of light.png",
+        "simulationUrl": "simulations/JS/3B10.html",
+        "screenshotUrl": "screenshots/3B10.png",
         "createdAt": "2026-2-4",
         "updatedAt": "2026-2-4"
     },
     {
-        "id": "inputoutput",
+        "id": "Gravity",
         "category": {
             "en-US": "JS",
             "zh-HK": JS"
@@ -82,8 +82,8 @@
         "contributors": [
             "ZHENG ANDY"
         ],
-        "simulationUrl": "simulations/JS/3d31_Gravity_of_Planett.html",
-        "screenshotUrl": "screenshots/3d31_Gravity_of_Planet.png",
+        "simulationUrl": "simulations/JS/3d31.html",
+        "screenshotUrl": "screenshots/3d31.png",
         "createdAt": "2026-2-4",
         "updatedAt": "2026-2-4"
     }
