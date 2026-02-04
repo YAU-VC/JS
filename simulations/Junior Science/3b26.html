@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Valtorta College - Gas Pressure: Virtual Syringe Game</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    h1 {
+      margin: 0;
+      color: #38bdf8;
+      text-align: center;
+    }
+
+    #game-container {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+      max-width: 1000px;
+      width: 100%;
+    }
+
+    #canvas-container {
+      background: #020617;
+      padding: 10px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(15,23,42,0.7);
+    }
+
+    canvas {
+      background: radial-gradient(circle at top, #1e293b, #020617 60%);
+      border-radius: 8px;
+      border: 2px solid #38bdf8;
+      display: block;
+    }
+
+    #control-panel {
+      flex: 1;
+      background: #020617;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(15,23,42,0.7);
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .slider-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .slider-group label {
+      font-size: 0.9rem;
+      color: #a5b4fc;
+    }
+
+    input[type="range"] {
+      width: 100%;
+    }
+
+    #stats {
+      background: #020617;
+      border-radius: 8px;
+      padding: 10px;
+      border: 1px solid #1f2937;
+      font-size: 0.9rem;
+    }
+
+    #stats p {
+      margin: 4px 0;
+    }
+
+    .highlight {
+      color: #facc15;
+      font-weight: bold;
+    }
+
+    #messages {
+      min-height: 48px;
+      padding: 8px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+
+    .msg-normal {
+      background: #0f172a;
+      color: #e5e7eb;
+    }
+
+    .msg-success {
+      background: #14532d;
+      color: #bbf7d0;
+    }
+
+    .msg-warning {
+      background: #7f1d1d;
+      color: #fecaca;
+    }
+
+    #buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    button {
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+
+    #startBtn {
+      background: #22c55e;
+      color: #022c22;
+    }
+
+    #pauseBtn {
+      background: #f97316;
+      color: #111827;
+    }
+
+    #resetBtn {
+      background: #e5e7eb;
+      color: #111827;
+    }
+
+    #instructions {
+      max-width: 1000px;
+      background: #020617;
+      padding: 10px 15px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      border: 1px solid #1f2937;
+    }
+
+    #instructions h2 {
+      margin-top: 0;
+      font-size: 1rem;
+      color: #38bdf8;
+    }
+
+    ul {
+      padding-left: 18px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Valtorta College - Gas Pressure: Virtual Syringe Game</h1>
+
+  <div id="game-container">
+    <div id="canvas-container">
+      <!-- Canvas = gas chamber view -->
+      <canvas id="chamber" width="500" height="400"></canvas>
+    </div>
+
+    <div id="control-panel">
+      <div class="slider-group">
+        <label for="volumeSlider">
+          Volume (plunger position) <span id="volumeLabel"></span>
+        </label>
+        <input type="range" id="volumeSlider" min="30" max="100" value="100" />
+        <small>Lower volume = plunger pushed down = more compression.</small>
+      </div>
+
+      <div class="slider-group">
+        <label for="tempSlider">
+          Temperature <span id="tempLabel"></span>
+        </label>
+        <input type="range" id="tempSlider" min="10" max="100" value="40" />
+        <small>Higher temperature = faster particles.</small>
+      </div>
+
+      <div id="stats">
+        <p>Target Pressure: <span id="targetPressure" class="highlight"></span> kPa (game units)</p>
+        <p>Current Pressure: <span id="pressureDisplay" class="highlight"></span> kPa</p>
+        <p>Collision Rate: <span id="collisionDisplay" class="highlight"></span> hits/s</p>
+        <p>Chamber Volume: <span id="volumeDisplay"></span> (relative)</p>
+        <p>Temperature: <span id="tempDisplay"></span> (relative)</p>
+      </div>
+
+      <div id="buttons">
+        <button id="startBtn">Start</button>
+        <button id="pauseBtn">Pause</button>
+        <button id="resetBtn">Reset Level</button>
+      </div>
+
+      <div id="messages" class="msg-normal">
+        Adjust the volume and temperature to reach the target pressure (±5 kPa).
+      </div>
+    </div>
+  </div>
+
+  <div id="instructions">
+    <h2>How to Play & What to Observe</h2>
+    <ul>
+      <li>Move the <strong>Volume</strong> slider: watch the plunger move and the chamber get smaller or larger.</li>
+      <li>Move the <strong>Temperature</strong> slider: gas particles bounce faster or slower.</li>
+      <li><strong>Pressure</strong> increases when:
+        <ul>
+          <li>Volume decreases (same number of particles in a smaller space).</li>
+          <li>Temperature increases (particles move faster and hit the walls more often).</li>
+        </ul>
+      </li>
+      <li>Your goal: make the <strong>Current Pressure</strong> match the <strong>Target Pressure</strong> within ±5 kPa.</li>
+      <li>If the pressure goes too high, the game warns that the syringe would burst!</li>
+    </ul>
+  </div>
+
+  <script>
+    // ======= BASIC SETUP =======
+    const canvas = document.getElementById("chamber");
+    const ctx = canvas.getContext("2d");
+
+    const volumeSlider = document.getElementById("volumeSlider");
+    const tempSlider = document.getElementById("tempSlider");
+    const volumeLabel = document.getElementById("volumeLabel");
+    const tempLabel = document.getElementById("tempLabel");
+
+    const pressureDisplay = document.getElementById("pressureDisplay");
+    const collisionDisplay = document.getElementById("collisionDisplay");
+    const volumeDisplay = document.getElementById("volumeDisplay");
+    const tempDisplay = document.getElementById("tempDisplay");
+    const targetPressureSpan = document.getElementById("targetPressure");
+
+    const startBtn = document.getElementById("startBtn");
+    const pauseBtn = document.getElementById("pauseBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const messages = document.getElementById("messages");
+
+    const WIDTH = canvas.width;
+    const HEIGHT = canvas.height;
+
+    // Gas particles
+    const NUM_PARTICLES = 60;
+    const particles = [];
+
+    // Chamber boundaries (will change with volume)
+    const chamber = {
+      left: 80,
+      right: WIDTH - 80,
+      top: 40,       // fixed top wall
+      bottom: HEIGHT - 40  // will move up when volume decreases
+    };
+
+    // Pressure & collision counting
+    let collisionCount = 0;        // collisions in current second
+    let lastCollisionUpdate = performance.now();
+    let collisionRate = 0;         // collisions per second
+    let currentPressure = 0;       // kPa (game units)
+    let targetPressure = 0;        // target for game
+    let animationId = null;
+    let running = false;
+
+    // Physics parameters
+    function getVolumeFactor() {
+      // Slider: 30 (smallest volume) to 100 (largest volume)
+      return volumeSlider.value / 100; // 0.3 to 1
+    }
+
+    function getTemperatureFactor() {
+      // Slider: 10 (cold) to 100 (hot)
+      return tempSlider.value / 50; // 0.2 to 2
+    }
+
+    function resetParticles() {
+      particles.length = 0;
+      const radius = 4;
+      for (let i = 0; i < NUM_PARTICLES; i++) {
+        const x = random(chamber.left + radius, chamber.right - radius);
+        const y = random(chamber.top + radius, chamber.bottom - radius);
+        const speed = random(0.5, 1.5);
+        const angle = random(0, Math.PI * 2);
+        particles.push({
+          x,
+          y,
+          vx: speed * Math.cos(angle),
+          vy: speed * Math.sin(angle),
+          r: radius
+        });
+      }
+    }
+
+    function random(min, max) {
+      return Math.random() * (max - min) + min;
+    }
+
+    // ======= GAME LOGIC =======
+    function setRandomTargetPressure() {
+      // Pick a random target in a reasonable range
+      targetPressure = Math.round(random(70, 140));
+      targetPressureSpan.textContent = targetPressure.toString();
+    }
+
+    function updateChamberBounds() {
+      const volumeFactor = getVolumeFactor(); // 0.3 to 1
+      const fullHeight = HEIGHT - 80;
+      const currentHeight = fullHeight * volumeFactor;
+      chamber.bottom = chamber.top + currentHeight;
+    }
+
+    function updateLabels() {
+      const volumeFactor = getVolumeFactor();
+      const tempFactor = getTemperatureFactor();
+
+      volumeLabel.textContent = `(${volumeSlider.value}%)`;
+      tempLabel.textContent = `(${tempSlider.value} units)`;
+
+      // Just show relative volume & temperature
+      volumeDisplay.textContent = volumeFactor.toFixed(2) + " (relative)";
+      tempDisplay.textContent = tempFactor.toFixed(2) + " (relative)";
+    }
+
+    function computePressure() {
+      /*
+        This is a simple "game" model, not a full real gas equation.
+        We link pressure to:
+          - collisionRate (hits/s)
+          - volume (smaller volume => higher pressure)
+      */
+      const volumeFactor = getVolumeFactor(); // smaller => higher P
+      const basePressure = (collisionRate + 10) / volumeFactor;
+      currentPressure = Math.round(basePressure);
+      pressureDisplay.textContent = currentPressure.toString();
+    }
+
+    function updateMessages() {
+      const diff = Math.abs(currentPressure - targetPressure);
+
+      const MAX_SAFE_PRESSURE = 200;
+
+      if (currentPressure > MAX_SAFE_PRESSURE) {
+        messages.className = "msg-warning";
+        messages.textContent =
+          "Pressure is extremely high! In real life, the syringe might burst. Try increasing volume or lowering temperature.";
+      } else if (diff <= 5) {
+        messages.className = "msg-success";
+        messages.textContent =
+          "Great job! You reached the target pressure. Think: How did changing volume or temperature help?";
+      } else if (currentPressure < targetPressure) {
+        messages.className = "msg-normal";
+        messages.textContent =
+          "Pressure is too low. Try decreasing the volume (compress the gas) or increasing the temperature.";
+      } else {
+        messages.className = "msg-normal";
+        messages.textContent =
+          "Pressure is too high. Try increasing the volume (expand the gas) or lowering the temperature.";
+      }
+    }
+
+    // ======= DRAWING =======
+    function drawChamber() {
+      ctx.clearRect(0, 0, WIDTH, HEIGHT);
+
+      // Background glow
+      ctx.fillStyle = "#020617";
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+      // Draw syringe outline
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 4;
+      ctx.strokeRect(chamber.left, chamber.top, chamber.right - chamber.left, chamber.bottom - chamber.top);
+
+      // Draw plunger top (moves with volume)
+      ctx.fillStyle = "#1d4ed8";
+      ctx.fillRect(chamber.left - 20, chamber.top - 15, chamber.right - chamber.left + 40, 10);
+
+      // Draw plunger rod
+      ctx.fillStyle = "#64748b";
+      ctx.fillRect((chamber.left + chamber.right) / 2 - 5, 0, 10, chamber.top - 15);
+
+      // Gradient for gas area
+      const grad = ctx.createLinearGradient(chamber.left, chamber.top, chamber.left, chamber.bottom);
+      grad.addColorStop(0, "rgba(56,189,248,0.15)");
+      grad.addColorStop(1, "rgba(129,140,248,0.05)");
+      ctx.fillStyle = grad;
+      ctx.fillRect(chamber.left, chamber.top, chamber.right - chamber.left, chamber.bottom - chamber.top);
+    }
+
+    function drawParticles() {
+      for (const p of particles) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = "#facc15";
+        ctx.fill();
+        ctx.strokeStyle = "rgba(250,204,21,0.4)";
+        ctx.stroke();
+      }
+    }
+
+    // ======= PHYSICS UPDATE =======
+    function updateParticles(dt) {
+      const tempFactor = getTemperatureFactor();
+
+      for (const p of particles) {
+        // Adjust speed based on temperature
+        p.x += p.vx * tempFactor * dt;
+        p.y += p.vy * tempFactor * dt;
+
+        let collided = false;
+
+        // Left/right walls
+        if (p.x - p.r < chamber.left) {
+          p.x = chamber.left + p.r;
+          p.vx *= -1;
+          collided = true;
+        } else if (p.x + p.r > chamber.right) {
+          p.x = chamber.right - p.r;
+          p.vx *= -1;
+          collided = true;
+        }
+
+        // Top/bottom walls
+        if (p.y - p.r < chamber.top) {
+          p.y = chamber.top + p.r;
+          p.vy *= -1;
+          collided = true;
+        } else if (p.y + p.r > chamber.bottom) {
+          p.y = chamber.bottom - p.r;
+          p.vy *= -1;
+          collided = true;
+        }
+
+        if (collided) {
+          collisionCount++;
+        }
+      }
+    }
+
+    function updateCollisionRate() {
+      const now = performance.now();
+      if (now - lastCollisionUpdate >= 1000) {
+        // Every second, update collisionRate and reset collisionCount
+        collisionRate = collisionCount;
+        collisionDisplay.textContent = collisionRate.toString();
+        collisionCount = 0;
+        lastCollisionUpdate = now;
+      }
+    }
+
+    // ======= ANIMATION LOOP =======
+    let lastTime = null;
+
+    function loop(timestamp) {
+      if (!running) return;
+
+      if (!lastTime) lastTime = timestamp;
+      const dt = (timestamp - lastTime) / 16.67; // ~60 FPS normalisation
+      lastTime = timestamp;
+
+      updateChamberBounds();
+      updateLabels();
+      updateParticles(dt);
+      updateCollisionRate();
+      computePressure();
+      updateMessages();
+
+      drawChamber();
+      drawParticles();
+
+      animationId = requestAnimationFrame(loop);
+    }
+
+    // ======= BUTTON HANDLERS =======
+    startBtn.addEventListener("click", () => {
+      if (!running) {
+        running = true;
+        lastTime = null;
+        messages.textContent =
+          "Game running. Adjust volume and temperature to reach the target pressure.";
+        messages.className = "msg-normal";
+        animationId = requestAnimationFrame(loop);
+      }
+    });
+
+    pauseBtn.addEventListener("click", () => {
+      running = false;
+      if (animationId) cancelAnimationFrame(animationId);
+      messages.textContent = "Paused. You can still adjust sliders and observe the chamber.";
+      messages.className = "msg-normal";
+    });
+
+    resetBtn.addEventListener("click", () => {
+      running = false;
+      if (animationId) cancelAnimationFrame(animationId);
+
+      // Reset sliders
+      volumeSlider.value = 100;
+      tempSlider.value = 40;
+
+      // Reset chamber and particles
+      updateChamberBounds();
+      resetParticles();
+      collisionCount = 0;
+      collisionRate = 0;
+      lastCollisionUpdate = performance.now();
+      computePressure();
+      collisionDisplay.textContent = "0";
+      pressureDisplay.textContent = currentPressure.toString();
+
+      setRandomTargetPressure();
+      updateLabels();
+      drawChamber();
+      drawParticles();
+
+      messages.textContent =
+        "New level! Adjust volume and temperature to match the new target pressure.";
+      messages.className = "msg-normal";
+    });
+
+    // ======= INITIALISE =======
+    function init() {
+      setRandomTargetPressure();
+      updateChamberBounds();
+      updateLabels();
+      resetParticles();
+      drawChamber();
+      drawParticles();
+      computePressure();
+      pressureDisplay.textContent = currentPressure.toString();
+    }
+
+    init();
+  </script>
+</body>
+</html>

@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Valtorta College - Power Grid Master</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@400;700;900&display=swap');
+        
+        body {
+            font-family: 'Exo 2', sans-serif;
+            overflow: hidden;
+            touch-action: none;
+            background-color: #1a202c;
+        }
+
+        .glass-panel {
+            background: rgba(17, 24, 39, 0.85);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .energy-bar-bg {
+            background: #374151;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .energy-fill {
+            transition: width 0.1s linear;
+            height: 100%;
+        }
+
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        
+        .critical-low {
+            animation: pulse-red 1.5s infinite;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col text-white">
+
+    <!-- HUD -->
+    <div class="absolute top-0 w-full p-2 z-10 flex justify-between items-start pointer-events-none">
+        
+        <!-- Battery Meter (The Goal) -->
+        <div class="glass-panel p-4 rounded-xl flex flex-col items-center w-48 mx-auto pointer-events-auto shadow-[0_0_20px_rgba(59,130,246,0.3)]">
+            <div class="text-xs text-blue-300 font-bold tracking-widest mb-1 uppercase">City Battery</div>
+            <div class="w-full h-8 bg-gray-900 rounded-lg border-2 border-gray-600 relative overflow-hidden">
+                <div id="battery-fill" class="h-full bg-gradient-to-r from-red-500 via-yellow-400 to-green-500 w-full transition-all duration-200"></div>
+                <!-- Percentage Text -->
+                <div class="absolute inset-0 flex items-center justify-center text-xs font-bold text-white shadow-black drop-shadow-md">
+                    <span id="battery-percent">100</span>%
+                </div>
+            </div>
+            <div class="text-[10px] text-gray-400 mt-1 text-center">Don't let it hit 0%!</div>
+        </div>
+
+        <!-- Score -->
+        <div class="glass-panel px-4 py-2 rounded-xl absolute right-2 top-2">
+            <div class="text-[10px] text-gray-400 uppercase">Power Generated</div>
+            <div class="text-xl font-mono text-yellow-400"><span id="score">0</span> kWh</div>
+        </div>
+    </div>
+
+    <!-- Game Area -->
+    <canvas id="gameCanvas" class="w-full flex-grow"></canvas>
+
+    <!-- Controls Overlay (Mobile Friendly) -->
+    <div class="absolute bottom-0 w-full p-4 grid grid-cols-3 gap-2 h-40 z-10">
+        
+        <!-- Solar Control -->
+        <div class="glass-panel rounded-xl p-2 flex flex-col items-center justify-center relative overflow-hidden group hover:bg-gray-800/50 transition cursor-pointer" onclick="handleSolarClick()">
+            <div class="absolute top-1 left-1 text-[10px] bg-yellow-600 px-1 rounded text-white">RADIANT</div>
+            <div class="text-4xl mb-1">☀️</div>
+            <div class="text-center">
+                <div class="font-bold text-yellow-300 text-sm">Solar Farm</div>
+                <div class="text-[10px] text-gray-400 leading-tight">Tap clouds to clear sky!</div>
+            </div>
+            <!-- Status -->
+            <div class="mt-2 w-full h-1 bg-gray-700 rounded-full">
+                <div id="solar-output" class="h-full bg-yellow-500 w-0"></div>
+            </div>
+        </div>
+
+        <!-- Hydro Control -->
+        <div class="glass-panel rounded-xl p-2 flex flex-col items-center justify-center relative overflow-hidden select-none active:scale-95 transition" 
+             onmousedown="startHydro()" onmouseup="endHydro()" onmouseleave="endHydro()"
+             ontouchstart="startHydro()" ontouchend="endHydro()">
+            <div class="absolute top-1 left-1 text-[10px] bg-blue-600 px-1 rounded text-white">POTENTIAL</div>
+            <div class="text-4xl mb-1">💧</div>
+            <div class="text-center">
+                <div class="font-bold text-blue-300 text-sm">Hydro Dam</div>
+                <div class="text-[10px] text-gray-400 leading-tight">Hold to release water</div>
+            </div>
+            <!-- Reservoir Level -->
+            <div class="absolute right-2 top-8 bottom-8 w-2 bg-gray-700 rounded-full overflow-hidden flex flex-col justify-end">
+                <div id="hydro-level" class="w-full bg-blue-500 h-full transition-all"></div>
+            </div>
+        </div>
+
+        <!-- Bio Control -->
+        <div class="glass-panel rounded-xl p-2 flex flex-col items-center justify-center relative overflow-hidden active:bg-gray-700/50 transition cursor-pointer select-none" onclick="pedalBike()">
+            <div class="absolute top-1 left-1 text-[10px] bg-green-600 px-1 rounded text-white">CHEMICAL</div>
+            <div class="text-4xl mb-1">🚴</div>
+            <div class="text-center">
+                <div class="font-bold text-green-300 text-sm">Bio-Generator</div>
+                <div class="text-[10px] text-gray-400 leading-tight">Tap fast to pedal!</div>
+            </div>
+            <!-- Stamina Bar -->
+            <div class="mt-2 w-2/3 h-2 bg-gray-700 rounded-full overflow-hidden border border-gray-500">
+                <div id="stamina-bar" class="h-full bg-green-500 w-full"></div>
+            </div>
+            <button id="eat-btn" class="absolute bottom-1 right-1 bg-green-700 text-[10px] px-2 py-1 rounded hover:bg-green-600 hidden" onclick="eatFood(event)">Eat 🍎</button>
+        </div>
+
+    </div>
+
+    <!-- Start Screen -->
+    <div id="startScreen" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-gray-900/95 backdrop-blur-md">
+        <!-- UPDATED TITLE HERE -->
+        <h1 class="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-blue-400 to-green-400 mb-4 text-center leading-tight">
+            VALTORTA COLLEGE<br>POWER GRID
+        </h1>
+        <div class="max-w-md text-center text-gray-300 mb-8 space-y-4 px-6">
+            <p>You are the Energy Manager. Demonstrate the <strong>Law of Conservation of Energy</strong> by transforming sources into electricity.</p>
+            <div class="grid grid-cols-1 gap-2 text-left text-sm bg-gray-800 p-4 rounded-lg">
+                <div class="flex items-center gap-2"><span class="text-2xl">☀️</span> <span>Clear clouds to let <strong>Radiant Energy</strong> hit panels.</span></div>
+                <div class="flex items-center gap-2"><span class="text-2xl">💧</span> <span>Hold to drop water. <strong>Potential</strong> &rarr; <strong>Kinetic</strong>.</span></div>
+                <div class="flex items-center gap-2"><span class="text-2xl">🚴</span> <span>Tap to pedal. <strong>Chemical</strong> (Food) &rarr; <strong>Kinetic</strong>.</span></div>
+            </div>
+        </div>
+        <button onclick="startGame()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-12 rounded-full text-xl shadow-[0_0_20px_rgba(37,99,235,0.5)] transition transform hover:scale-105">
+            START GENERATING
+        </button>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="gameOverScreen" class="hidden absolute inset-0 z-50 flex flex-col items-center justify-center bg-gray-900/95 backdrop-blur-md">
+        <h1 class="text-4xl font-bold text-red-500 mb-2">BLACKOUT!</h1>
+        <p class="text-gray-400 mb-6">The city ran out of power.</p>
+        <div class="text-2xl mb-8">Total Generation: <span id="final-score" class="text-yellow-400 font-bold">0</span> kWh</div>
+        <button onclick="resetGame()" class="bg-white text-gray-900 hover:bg-gray-200 font-bold py-3 px-8 rounded-full shadow-lg transition">
+            Try Again
+        </button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Game State
+        let isPlaying = false;
+        let animationId;
+        let score = 0;
+        let battery = 100;
+        let batteryDrainRate = 0.05;
+        let difficultyMultiplier = 1;
+
+        // Systems
+        const solar = {
+            clouds: [],
+            output: 0, // 0 to 1
+            efficiency: 0
+        };
+
+        const hydro = {
+            waterLevel: 100, // Reservoir
+            isActive: false,
+            particles: [],
+            turbineAngle: 0,
+            output: 0
+        };
+
+        const bio = {
+            stamina: 100,
+            pedalSpeed: 0,
+            angle: 0,
+            output: 0,
+            isExhausted: false
+        };
+
+        // Resize
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight; // Full height, we draw behind UI
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // --- INPUT HANDLING ---
+        function handleSolarClick() {
+            // Logic handled in click event listener on canvas for clouds
+        }
+
+        function startHydro() { 
+            if(hydro.waterLevel > 0) hydro.isActive = true; 
+        }
+        function endHydro() { hydro.isActive = false; }
+
+        function pedalBike() {
+            if (bio.isExhausted) return;
+            bio.pedalSpeed += 5;
+            if(bio.pedalSpeed > 20) bio.pedalSpeed = 20;
+            bio.stamina -= 2;
+            createParticle(canvas.width * 0.83, canvas.height * 0.5, '#4ade80', '⚡');
+        }
+
+        function eatFood(e) {
+            e.stopPropagation();
+            bio.stamina = 100;
+            bio.isExhausted = false;
+            document.getElementById('eat-btn').classList.add('hidden');
+            createFloatingText(canvas.width * 0.83, canvas.height * 0.4, "Stamina Refilled!", "#4ade80");
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            checkCloudClick(e.clientX, e.clientY);
+        });
+        canvas.addEventListener('touchstart', (e) => {
+            const touch = e.touches[0];
+            checkCloudClick(touch.clientX, touch.clientY);
+        });
+
+        function checkCloudClick(x, y) {
+            // Check solar section (Left third of screen roughly)
+            if (x > canvas.width / 3) return; 
+
+            for(let i=0; i<solar.clouds.length; i++) {
+                let c = solar.clouds[i];
+                let dist = Math.hypot(x - c.x, y - c.y);
+                if(dist < c.size) {
+                    solar.clouds.splice(i, 1);
+                    createFloatingText(x, y, "Radiant Path Clear!", "#fbbf24");
+                    return;
+                }
+            }
+        }
+
+        // --- GAME LOOP ---
+
+        function startGame() {
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            
+            score = 0;
+            battery = 100;
+            batteryDrainRate = 0.05;
+            difficultyMultiplier = 1;
+            
+            // Reset systems
+            solar.clouds = [];
+            hydro.waterLevel = 100;
+            bio.stamina = 100;
+            bio.isExhausted = false;
+            
+            isPlaying = true;
+            animate();
+            
+            // Spawn clouds periodically
+            setInterval(() => {
+                if(isPlaying && Math.random() < 0.4) spawnCloud();
+            }, 2000);
+        }
+
+        function resetGame() {
+            startGame();
+        }
+
+        function spawnCloud() {
+            solar.clouds.push({
+                x: -50,
+                y: Math.random() * (canvas.height * 0.4) + 50,
+                speed: Math.random() * 1 + 0.5,
+                size: 40 + Math.random() * 30
+            });
+        }
+
+        // Particle System
+        let effects = [];
+        function createParticle(x, y, color, char) {
+            effects.push({x, y, vx: (Math.random()-0.5)*2, vy: -1 - Math.random(), life: 1, color, char});
+        }
+        function createFloatingText(x, y, text, color) {
+            effects.push({x, y, vx: 0, vy: -1, life: 2, color, text, isText: true});
+        }
+
+        function animate() {
+            if(!isPlaying) return;
+
+            // Logic Updates
+            batteryDrainRate = 0.05 + (score / 5000); // Gets harder
+            battery -= batteryDrainRate;
+
+            // 1. Solar Logic
+            // Count clouds covering the "sun" area (top left)
+            let covered = 0;
+            solar.clouds.forEach(c => {
+                c.x += c.speed;
+                if(c.x > canvas.width/3 + 50) c.markForDelete = true;
+                // Simple cloud logic
+                if (c.x > 50 && c.x < canvas.width/3 - 50) covered++;
+            });
+            solar.clouds = solar.clouds.filter(c => !c.markForDelete);
+            
+            let targetSolarEff = Math.max(0, 1 - (covered * 0.4));
+            solar.efficiency += (targetSolarEff - solar.efficiency) * 0.05;
+            let solarGen = solar.efficiency * 0.1;
+            battery += solarGen;
+            score += solarGen * 10;
+            
+            document.getElementById('solar-output').style.width = (solar.efficiency * 100) + "%";
+
+
+            // 2. Hydro Logic
+            if(hydro.isActive && hydro.waterLevel > 0) {
+                hydro.waterLevel -= 0.3;
+                hydro.turbineAngle += 0.2;
+                let hydroGen = 0.3; // High power
+                battery += hydroGen;
+                score += hydroGen * 10;
+                
+                // Water particles
+                if(Math.random() > 0.5) {
+                    hydro.particles.push({
+                        x: canvas.width * 0.5 + (Math.random()-0.5)*20,
+                        y: canvas.height * 0.3,
+                        vy: 0
+                    });
+                }
+            } else {
+                hydro.waterLevel = Math.min(100, hydro.waterLevel + 0.05); // Refill slowly
+                hydro.turbineAngle *= 0.95; // Slow down
+            }
+            document.getElementById('hydro-level').style.height = hydro.waterLevel + "%";
+            
+            // Hydro Particles physics
+            hydro.particles.forEach((p, i) => {
+                p.y += p.vy;
+                p.vy += 0.5; // Gravity
+                if(p.y > canvas.height * 0.6) {
+                    // Hit turbine
+                    hydro.particles.splice(i, 1);
+                }
+            });
+
+
+            // 3. Bio Logic
+            bio.pedalSpeed *= 0.96; // Friction
+            bio.angle += bio.pedalSpeed * 0.1;
+            
+            if(bio.pedalSpeed > 0.1) {
+                let bioGen = bio.pedalSpeed * 0.02;
+                battery += bioGen;
+                score += bioGen * 10;
+            }
+
+            if(bio.stamina <= 0) {
+                bio.stamina = 0;
+                bio.isExhausted = true;
+                document.getElementById('eat-btn').classList.remove('hidden');
+            }
+            document.getElementById('stamina-bar').style.width = bio.stamina + "%";
+            
+            
+            // Cap Battery
+            if(battery > 100) battery = 100;
+            
+            // Game Over
+            if(battery <= 0) {
+                battery = 0;
+                document.getElementById('final-score').innerText = Math.floor(score);
+                document.getElementById('gameOverScreen').classList.remove('hidden');
+                isPlaying = false;
+            }
+
+            // Update DOM
+            document.getElementById('battery-fill').style.width = battery + "%";
+            document.getElementById('battery-percent').innerText = Math.floor(battery);
+            document.getElementById('score').innerText = Math.floor(score);
+            
+            // Battery Color logic
+            const batFill = document.getElementById('battery-fill');
+            if(battery < 20) batFill.className = "h-full w-full bg-red-600 critical-low";
+            else if(battery < 50) batFill.className = "h-full w-full bg-yellow-500 transition-all duration-200";
+            else batFill.className = "h-full w-full bg-gradient-to-r from-green-400 to-emerald-600 transition-all duration-200";
+
+
+            draw();
+            animationId = requestAnimationFrame(animate);
+        }
+
+        // --- RENDER ---
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const w = canvas.width;
+            const h = canvas.height;
+            const third = w / 3;
+
+            // SECTION 1: SOLAR (Left)
+            // Sky gradient
+            let skyColor = ctx.createLinearGradient(0, 0, 0, h);
+            skyColor.addColorStop(0, "#38bdf8");
+            skyColor.addColorStop(1, "#bae6fd");
+            ctx.fillStyle = skyColor;
+            ctx.fillRect(0, 0, third, h);
+
+            // Sun (Visualizes radiant energy)
+            ctx.fillStyle = `rgba(253, 224, 71, ${0.5 + solar.efficiency * 0.5})`;
+            ctx.beginPath();
+            ctx.arc(third/2, h * 0.2, 40, 0, Math.PI*2);
+            ctx.fill();
+            // Sun Rays
+            if(solar.efficiency > 0.5) {
+                ctx.strokeStyle = "rgba(253, 224, 71, 0.5)";
+                ctx.lineWidth = 2;
+                for(let i=0; i<8; i++) {
+                    let angle = Date.now()/1000 + (i * Math.PI/4);
+                    ctx.beginPath();
+                    ctx.moveTo(third/2 + Math.cos(angle)*50, h*0.2 + Math.sin(angle)*50);
+                    ctx.lineTo(third/2 + Math.cos(angle)*80, h*0.2 + Math.sin(angle)*80);
+                    ctx.stroke();
+                }
+            }
+
+            // Solar Panels
+            ctx.fillStyle = "#1e3a8a";
+            ctx.beginPath();
+            ctx.moveTo(20, h-180);
+            ctx.lineTo(third-20, h-180);
+            ctx.lineTo(third-10, h-140);
+            ctx.lineTo(30, h-140);
+            ctx.fill();
+            // Grid lines on panel
+            ctx.strokeStyle = "#60a5fa";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(third/2, h-180);
+            ctx.lineTo(third/2, h-140);
+            ctx.stroke();
+
+            // Wire to center
+            ctx.strokeStyle = "#fbbf24"; // Electricity color
+            ctx.lineWidth = 3;
+            ctx.setLineDash([5, 5]);
+            ctx.lineDashOffset = -Date.now()/10; // Flow animation
+            ctx.beginPath();
+            ctx.moveTo(third/2, h-140);
+            ctx.lineTo(third/2, h-100);
+            ctx.lineTo(w/2, h-100); // Connect to center
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+
+            // Clouds
+            solar.clouds.forEach(c => {
+                ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+                ctx.beginPath();
+                ctx.arc(c.x, c.y, c.size, 0, Math.PI * 2);
+                ctx.arc(c.x + c.size*0.6, c.y - c.size*0.5, c.size*0.7, 0, Math.PI * 2);
+                ctx.arc(c.x + c.size*1.2, c.y, c.size*0.8, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+
+            // SECTION 2: HYDRO (Middle)
+            ctx.fillStyle = "#ecfeff"; // Lighter bg
+            ctx.fillRect(third, 0, third, h);
+            
+            // Dam Wall
+            ctx.fillStyle = "#64748b";
+            ctx.fillRect(third, h*0.2, third, h*0.4);
+            
+            // Water Reservoir (Top)
+            let waterH = (hydro.waterLevel/100) * (h*0.2);
+            ctx.fillStyle = "#3b82f6";
+            ctx.fillRect(third, h*0.2 - waterH, third, waterH);
+            
+            // Falling Water
+            hydro.particles.forEach(p => {
+                ctx.fillStyle = "#60a5fa";
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 4, 0, Math.PI*2);
+                ctx.fill();
+            });
+
+            // Turbine (Spinning)
+            ctx.save();
+            ctx.translate(w/2, h*0.65);
+            ctx.rotate(hydro.turbineAngle);
+            ctx.fillStyle = "#475569";
+            // Blades
+            for(let i=0; i<3; i++) {
+                ctx.beginPath();
+                ctx.rect(-5, -30, 10, 60);
+                ctx.fill();
+                ctx.rotate(Math.PI*2/3);
+            }
+            ctx.restore();
+
+            // Wire
+            if(hydro.isActive) {
+                ctx.strokeStyle = "#fbbf24"; 
+                ctx.lineWidth = 3;
+                ctx.setLineDash([5, 5]);
+                ctx.lineDashOffset = -Date.now()/5; 
+                ctx.beginPath();
+                ctx.moveTo(w/2, h*0.7);
+                ctx.lineTo(w/2, h-100);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+
+            // SECTION 3: BIO (Right)
+            ctx.fillStyle = "#f0fdf4";
+            ctx.fillRect(third*2, 0, third, h);
+            
+            // Bike Generator Visual
+            ctx.save();
+            ctx.translate(third*2.5, h*0.6);
+            
+            // Back Wheel (Generator)
+            ctx.save();
+            ctx.rotate(bio.angle);
+            ctx.strokeStyle = "#374151";
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(0, 0, 30, 0, Math.PI*2);
+            ctx.stroke();
+            // Spokes
+            ctx.lineWidth = 1;
+            for(let i=0; i<4; i++) {
+                ctx.beginPath(); ctx.moveTo(-30,0); ctx.lineTo(30,0); ctx.stroke();
+                ctx.rotate(Math.PI/4);
+            }
+            ctx.restore();
+
+            // Frame
+            ctx.strokeStyle = "#ef4444"; // Red bike
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(0,0); ctx.lineTo(-25, -25); // Seat post
+            ctx.lineTo(25, -25); // Handlebar post
+            ctx.lineTo(0, 0);
+            ctx.stroke();
+            
+            // Person (Stick figure)
+            ctx.strokeStyle = "#1f2937";
+            ctx.beginPath();
+            // Body
+            ctx.moveTo(-25, -25); ctx.lineTo(-10, -50); 
+            // Head
+            ctx.moveTo(-10, -50); ctx.arc(-10, -58, 8, 0, Math.PI*2);
+            // Legs (Animating)
+            let legOffset = Math.sin(bio.angle)*10;
+            ctx.moveTo(-25, -25); ctx.lineTo(0, -10 + legOffset);
+            ctx.moveTo(-25, -25); ctx.lineTo(0, -10 - legOffset);
+            ctx.stroke();
+
+            ctx.restore();
+
+            // Wire
+            if(bio.pedalSpeed > 1) {
+                ctx.strokeStyle = "#fbbf24"; 
+                ctx.lineWidth = 3;
+                ctx.setLineDash([5, 5]);
+                ctx.lineDashOffset = -Date.now()/8; 
+                ctx.beginPath();
+                ctx.moveTo(third*2.5, h*0.65);
+                ctx.lineTo(third*2.5, h-100);
+                ctx.lineTo(w/2, h-100);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            // --- GLOBAL EFFECTS ---
+            effects.forEach((e, i) => {
+                if(e.isText) {
+                    ctx.font = "bold 16px Arial";
+                    ctx.fillStyle = e.color;
+                    ctx.fillText(e.text, e.x, e.y);
+                } else {
+                    ctx.font = "20px Arial";
+                    ctx.fillText(e.char, e.x, e.y);
+                }
+                e.y += e.vy;
+                e.x += e.vx;
+                e.life -= 0.02;
+                if(e.life <= 0) effects.splice(i, 1);
+            });
+            
+            // Draw Titles on Canvas for sections
+            ctx.fillStyle = "rgba(0,0,0,0.5)";
+            ctx.font = "12px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("SOLAR FARM", third*0.5, h*0.5);
+            ctx.fillText("HYDRO DAM", third*1.5, h*0.5);
+            ctx.fillText("GYM GEN", third*2.5, h*0.5);
+        }
+
+    </script>
+</body>
+</html>

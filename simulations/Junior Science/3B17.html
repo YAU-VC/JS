@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Valtorta College Gravity Laboratory</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            overflow: hidden; /* Prevent scrolling */
+            touch-action: none; /* Prevent zoom/scroll on mobile */
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Custom Scrollbar for the info panel */
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: #1e293b; 
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #475569; 
+            border-radius: 3px;
+        }
+
+        /* Star twinkle animation */
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 0.3; }
+        }
+        
+        .hud-text {
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col relative">
+
+    <!-- GAME CANVAS LAYER -->
+    <canvas id="gameCanvas" class="absolute inset-0 z-0"></canvas>
+
+    <!-- UI LAYER -->
+    <div class="relative z-10 flex flex-col h-full pointer-events-none">
+        
+        <!-- Top Bar: HUD -->
+        <div class="flex justify-between items-start p-4 w-full bg-gradient-to-b from-slate-900/90 to-transparent">
+            <div class="pointer-events-auto">
+                <h1 class="text-xl md:text-2xl font-bold text-sky-400 tracking-tight">VALTORTA COLLEGE <span class="text-white font-light">GRAVITY</span></h1>
+                <div class="flex items-center gap-2 mt-1">
+                    <span id="planet-badge" class="px-2 py-0.5 rounded text-xs font-bold bg-indigo-600 text-white uppercase tracking-wider">EARTH</span>
+                    <span id="gravity-readout" class="text-xs text-slate-400 mono">g = 9.81 m/s²</span>
+                </div>
+                
+                <!-- Added Credits Display -->
+                <div class="mt-2 text-amber-400 font-mono text-sm font-bold flex items-center gap-2">
+                    <span>🪙 CREDITS:</span>
+                    <span id="credits-display">0</span>
+                </div>
+            </div>
+
+            <!-- Stats Display (Hidden in Menu) -->
+            <div id="flight-hud" class="hidden flex-col items-end text-right mono text-sm md:text-base gap-1">
+                <div class="text-emerald-400 hud-text">ALTITUDE: <span id="hud-alt">0</span> m</div>
+                <div class="text-sky-400 hud-text">VELOCITY: <span id="hud-vel">0</span> m/s</div>
+                <div class="text-amber-400 hud-text">FUEL: <span id="hud-fuel">100</span>%</div>
+            </div>
+            
+            <button id="menu-btn" class="pointer-events-auto bg-slate-800/80 hover:bg-slate-700 text-white p-2 rounded-lg border border-slate-600 backdrop-blur-sm transition-colors" onclick="game.togglePause()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            </button>
+        </div>
+
+        <!-- Center Area: Modals & Messages -->
+        <div class="flex-1 flex items-center justify-center p-4">
+            
+            <!-- MAIN MENU / PLANET SELECTOR -->
+            <div id="main-menu" class="pointer-events-auto bg-slate-900/95 border border-slate-700 backdrop-blur-xl p-6 md:p-8 rounded-2xl shadow-2xl max-w-2xl w-full flex flex-col gap-6 transform transition-all">
+                <div class="text-center">
+                    <h2 class="text-3xl font-bold text-white mb-2">Select Simulation Environment</h2>
+                    <p class="text-slate-400 text-sm">Choose a celestial body to experience its gravitational pull.</p>
+                </div>
+
+                <!-- Shop Button -->
+                <button onclick="game.openShop()" class="mx-auto bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 px-6 rounded-full flex items-center gap-2 transition-all shadow-lg shadow-amber-900/20">
+                    <span>🛍️</span> Open Ship Shop
+                </button>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Moon -->
+                    <button onclick="game.startLevel('moon')" class="group relative overflow-hidden bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-sky-500 rounded-xl p-4 text-left transition-all">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-bold text-lg text-white">The Moon</h3>
+                            <span class="text-xs bg-slate-700 px-2 py-1 rounded text-slate-300">Easy</span>
+                        </div>
+                        <p class="text-slate-400 text-sm mb-3">Gravity: 1.62 m/s² (16% of Earth)</p>
+                        <div class="text-xs text-sky-400 font-mono">Feels floaty. Easy to land.</div>
+                        <div class="absolute bottom-0 right-0 w-16 h-16 bg-gray-200 rounded-full blur-2xl opacity-10 group-hover:opacity-20 transition-opacity"></div>
+                    </button>
+
+                    <!-- Mars -->
+                    <button onclick="game.startLevel('mars')" class="group relative overflow-hidden bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-red-500 rounded-xl p-4 text-left transition-all">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-bold text-lg text-white">Mars</h3>
+                            <span class="text-xs bg-slate-700 px-2 py-1 rounded text-slate-300">Medium</span>
+                        </div>
+                        <p class="text-slate-400 text-sm mb-3">Gravity: 3.71 m/s² (38% of Earth)</p>
+                        <div class="text-xs text-red-400 font-mono">Standard challenge.</div>
+                        <div class="absolute bottom-0 right-0 w-16 h-16 bg-red-500 rounded-full blur-2xl opacity-10 group-hover:opacity-20 transition-opacity"></div>
+                    </button>
+
+                    <!-- Earth -->
+                    <button onclick="game.startLevel('earth')" class="group relative overflow-hidden bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-emerald-500 rounded-xl p-4 text-left transition-all">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-bold text-lg text-white">Earth</h3>
+                            <span class="text-xs bg-slate-700 px-2 py-1 rounded text-slate-300">Hard</span>
+                        </div>
+                        <p class="text-slate-400 text-sm mb-3">Gravity: 9.81 m/s² (Standard)</p>
+                        <div class="text-xs text-emerald-400 font-mono">Strong pull. Requires focus.</div>
+                        <div class="absolute bottom-0 right-0 w-16 h-16 bg-blue-500 rounded-full blur-2xl opacity-10 group-hover:opacity-20 transition-opacity"></div>
+                    </button>
+
+                    <!-- Jupiter -->
+                    <button onclick="game.startLevel('jupiter')" class="group relative overflow-hidden bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-amber-500 rounded-xl p-4 text-left transition-all">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-bold text-lg text-white">Jupiter</h3>
+                            <span class="text-xs bg-slate-700 px-2 py-1 rounded text-slate-300">Extreme</span>
+                        </div>
+                        <p class="text-slate-400 text-sm mb-3">Gravity: 24.79 m/s² (2.5x Earth)</p>
+                        <div class="text-xs text-amber-400 font-mono">Crushing weight. Fuel burns fast.</div>
+                        <div class="absolute bottom-0 right-0 w-16 h-16 bg-amber-600 rounded-full blur-2xl opacity-10 group-hover:opacity-20 transition-opacity"></div>
+                    </button>
+                </div>
+
+                <div class="bg-slate-950/50 p-4 rounded-lg text-sm text-slate-300">
+                    <strong class="text-sky-400 block mb-1">Educational Note:</strong>
+                    Gravity depends on mass. Jupiter is huge (318x Earth's mass), creating a massive pull. The Moon is small, creating a weak pull. In this simulation, your engine power is constant—only gravity changes!
+                </div>
+            </div>
+
+            <!-- SHOP MODAL -->
+            <div id="shop-modal" class="hidden pointer-events-auto absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                <div class="bg-slate-900 border border-slate-600 rounded-2xl w-full max-w-2xl flex flex-col max-h-[90vh]">
+                    <div class="p-6 border-b border-slate-700 flex justify-between items-center">
+                        <div>
+                            <h2 class="text-2xl font-bold text-white">Ship Hangar</h2>
+                            <p class="text-slate-400 text-sm">Spend credits earned from successful landings.</p>
+                        </div>
+                        <div class="text-amber-400 font-mono font-bold text-xl">
+                            🪙 <span id="shop-credits">0</span>
+                        </div>
+                    </div>
+                    
+                    <div class="p-6 overflow-y-auto custom-scroll grid grid-cols-1 sm:grid-cols-2 gap-4" id="shop-grid">
+                        <!-- Items injected by JS -->
+                    </div>
+
+                    <div class="p-6 border-t border-slate-700 flex justify-end">
+                        <button onclick="game.closeShop()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-6 rounded-lg transition-colors">Close</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GAME OVER / SUCCESS MODAL -->
+            <div id="result-modal" class="hidden pointer-events-auto bg-slate-900/95 border border-slate-700 backdrop-blur-xl p-8 rounded-2xl shadow-2xl max-w-md w-full text-center flex-col items-center">
+                <div id="result-icon" class="text-6xl mb-4">💥</div>
+                <h2 id="result-title" class="text-3xl font-bold text-white mb-2">CRASHED</h2>
+                <p id="result-message" class="text-slate-400 mb-6">Velocity was too high.</p>
+                
+                <div class="bg-slate-800 p-4 rounded-lg mb-6 w-full text-left">
+                    <p class="text-xs text-slate-500 uppercase font-bold mb-1">Physics Fact</p>
+                    <p id="result-fact" class="text-sm text-sky-200">Impact force increases with the square of velocity.</p>
+                </div>
+
+                <div class="flex gap-4 w-full">
+                    <button onclick="game.resetLevel()" class="flex-1 bg-white hover:bg-gray-100 text-slate-900 font-bold py-3 rounded-lg transition-colors">Try Again</button>
+                    <button onclick="game.showMenu()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-lg transition-colors">Menu</button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Bottom Bar: Controls (Mobile Only mostly, but visible for style) -->
+        <div id="controls-area" class="hidden pointer-events-auto w-full p-6 pb-8 justify-between items-center bg-gradient-to-t from-slate-900 to-transparent">
+            
+            <div class="flex flex-col items-center gap-1 text-slate-400 text-xs font-mono hidden md:flex">
+                <div class="flex gap-2">
+                    <kbd class="bg-slate-800 px-2 py-1 rounded border border-slate-600">⬆</kbd> Thrust
+                </div>
+                <div class="flex gap-2">
+                    <kbd class="bg-slate-800 px-2 py-1 rounded border border-slate-600">⬅</kbd> <kbd class="bg-slate-800 px-2 py-1 rounded border border-slate-600">➡</kbd> Rotate
+                </div>
+            </div>
+
+            <!-- Mobile Controls -->
+            <div class="flex md:hidden w-full justify-between">
+                <div class="flex gap-4">
+                    <button id="btn-left" class="w-20 h-20 rounded-full bg-slate-800/80 border border-slate-600 active:bg-sky-600 active:border-sky-400 flex items-center justify-center text-2xl transition-colors">↺</button>
+                    <button id="btn-right" class="w-20 h-20 rounded-full bg-slate-800/80 border border-slate-600 active:bg-sky-600 active:border-sky-400 flex items-center justify-center text-2xl transition-colors">↻</button>
+                </div>
+                <button id="btn-thrust" class="w-24 h-24 rounded-full bg-rose-600/80 border-4 border-rose-500 active:bg-rose-500 active:scale-95 shadow-lg shadow-rose-900/50 flex items-col flex-col items-center justify-center text-white transition-all">
+                    <span class="text-xs font-bold tracking-widest uppercase">Thrust</span>
+                    <span class="text-2xl">🔥</span>
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+<script>
+/**
+ * GRAVITY LABORATORY & LANDER
+ * A physics-based game using HTML5 Canvas
+ */
+
+// --- CONFIGURATION & CONSTANTS ---
+const PLANETS = {
+    moon: { name: 'Moon', gravity: 1.62, color: '#9ca3af', atmosphere: false, stars: true, terrainColor: '#4b5563', reward: 100 },
+    mars: { name: 'Mars', gravity: 3.71, color: '#ef4444', atmosphere: true, stars: true, terrainColor: '#7f1d1d', reward: 250 },
+    earth: { name: 'Earth', gravity: 9.81, color: '#10b981', atmosphere: true, stars: false, terrainColor: '#064e3b', reward: 500 },
+    jupiter: { name: 'Jupiter', gravity: 24.79, color: '#d97706', atmosphere: true, stars: false, terrainColor: '#78350f', reward: 1000 }
+};
+
+const SHIPS = [
+    { id: 'default', name: 'Standard Lander', cost: 0, color: '#e2e8f0', accent: '#0ea5e9', desc: "Reliable and sturdy standard issue." },
+    { id: 'red', name: 'Mars Explorer', cost: 500, color: '#f87171', accent: '#991b1b', desc: "Ceramic coating for dusty environments." },
+    { id: 'gold', name: 'Golden Voyager', cost: 1500, color: '#facc15', accent: '#854d0e', desc: "Plated in pure gold. Heavy on style." },
+    { id: 'stealth', name: 'Void Phantom', cost: 3000, color: '#334155', accent: '#0f172a', desc: "Hard to see against deep space." },
+    { id: 'neon', name: 'Cyber Hull', cost: 5000, color: '#22d3ee', accent: '#e879f9', desc: "Glowing neon edges for high visibility." }
+];
+
+const FACTS = {
+    moon: "On the Moon, you weigh 16.5% of your Earth weight. A 100kg person weighs only 16.5kg here!",
+    mars: "Mars gravity is about 38% of Earth's. You could jump 3x higher on Mars than on Earth.",
+    earth: "Earth's standard gravity is 9.807 m/s². It varies slightly depending on if you are at the poles or the equator.",
+    jupiter: "Jupiter has the strongest gravity in the solar system (2.5x Earth). You'd likely be crushed by your own weight instantly!"
+};
+
+// --- GAME ENGINE ---
+
+class Game {
+    constructor() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.width = window.innerWidth;
+        this.height = window.innerHeight;
+        
+        this.state = 'MENU'; // MENU, PLAYING, ENDED
+        this.planet = PLANETS.earth;
+        
+        // Shop State
+        this.credits = 0;
+        this.unlockedShips = ['default'];
+        this.currentShipId = 'default';
+
+        this.ship = null;
+        this.terrain = [];
+        this.landingPad = null;
+        this.particles = [];
+        this.stars = [];
+
+        this.lastTime = 0;
+        this.dt = 0;
+
+        this.keys = { ArrowUp: false, ArrowLeft: false, ArrowRight: false };
+        
+        this.setupEvents();
+        this.resize();
+        this.generateStars();
+        this.loop(0);
+        this.updateShopUI();
+    }
+
+    setupEvents() {
+        window.addEventListener('resize', () => this.resize());
+        
+        // Keyboard
+        window.addEventListener('keydown', (e) => this.keys[e.code] = true);
+        window.addEventListener('keyup', (e) => this.keys[e.code] = false);
+
+        // Touch Buttons
+        const touchHandler = (id, key, val) => {
+            const el = document.getElementById(id);
+            if(!el) return;
+            const setKey = (v) => { this.keys[key] = v; };
+            el.addEventListener('mousedown', (e) => { e.preventDefault(); setKey(true); });
+            el.addEventListener('mouseup', (e) => { e.preventDefault(); setKey(false); });
+            el.addEventListener('touchstart', (e) => { e.preventDefault(); setKey(true); });
+            el.addEventListener('touchend', (e) => { e.preventDefault(); setKey(false); });
+        };
+
+        touchHandler('btn-thrust', 'ArrowUp');
+        touchHandler('btn-left', 'ArrowLeft');
+        touchHandler('btn-right', 'ArrowRight');
+    }
+
+    // SHOP METHODS
+    openShop() {
+        document.getElementById('shop-modal').classList.remove('hidden');
+        document.getElementById('shop-modal').classList.add('flex');
+        this.updateShopUI();
+    }
+
+    closeShop() {
+        document.getElementById('shop-modal').classList.add('hidden');
+        document.getElementById('shop-modal').classList.remove('flex');
+    }
+
+    buyShip(id) {
+        const ship = SHIPS.find(s => s.id === id);
+        if (!ship) return;
+
+        if (this.unlockedShips.includes(id)) {
+            // Already owned, select it
+            this.currentShipId = id;
+        } else if (this.credits >= ship.cost) {
+            // Purchase
+            this.credits -= ship.cost;
+            this.unlockedShips.push(id);
+            this.currentShipId = id;
+        }
+        this.updateShopUI();
+        this.updateHUD();
+    }
+
+    updateShopUI() {
+        document.getElementById('shop-credits').innerText = this.credits;
+        document.getElementById('credits-display').innerText = this.credits;
+        
+        const grid = document.getElementById('shop-grid');
+        grid.innerHTML = '';
+
+        SHIPS.forEach(ship => {
+            const isOwned = this.unlockedShips.includes(ship.id);
+            const isEquipped = this.currentShipId === ship.id;
+            const canAfford = this.credits >= ship.cost;
+
+            let btnClass, btnText, btnAction;
+
+            if (isEquipped) {
+                btnClass = "bg-emerald-600 text-white cursor-default opacity-50";
+                btnText = "Equipped";
+                btnAction = "";
+            } else if (isOwned) {
+                btnClass = "bg-sky-600 hover:bg-sky-500 text-white";
+                btnText = "Equip";
+                btnAction = `game.buyShip('${ship.id}')`;
+            } else if (canAfford) {
+                btnClass = "bg-amber-600 hover:bg-amber-500 text-white";
+                btnText = `Buy ${ship.cost} 🪙`;
+                btnAction = `game.buyShip('${ship.id}')`;
+            } else {
+                btnClass = "bg-slate-700 text-slate-400 cursor-not-allowed";
+                btnText = `Cost ${ship.cost} 🪙`;
+                btnAction = "";
+            }
+
+            const card = document.createElement('div');
+            card.className = `bg-slate-800 border ${isEquipped ? 'border-emerald-500 ring-1 ring-emerald-500' : 'border-slate-700'} rounded-xl p-4 flex flex-col gap-3`;
+            card.innerHTML = `
+                <div class="flex justify-between items-start">
+                    <h3 class="font-bold text-white text-lg">${ship.name}</h3>
+                    <div class="w-8 h-8 rounded-full border border-slate-500" style="background-color: ${ship.color}; box-shadow: 0 0 10px ${ship.accent}40;"></div>
+                </div>
+                <p class="text-slate-400 text-sm flex-1">${ship.desc}</p>
+                <button onclick="${btnAction}" class="w-full py-2 rounded font-bold transition-colors ${btnClass}" ${!isOwned && !canAfford ? 'disabled' : ''}>
+                    ${btnText}
+                </button>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    updateHUD() {
+        document.getElementById('credits-display').innerText = this.credits;
+    }
+
+    resize() {
+        this.width = window.innerWidth;
+        this.height = window.innerHeight;
+        this.canvas.width = this.width;
+        this.canvas.height = this.height;
+        if(this.state === 'MENU') {
+            this.generateStars();
+        }
+    }
+
+    generateStars() {
+        this.stars = [];
+        for(let i=0; i<150; i++) {
+            this.stars.push({
+                x: Math.random() * this.width,
+                y: Math.random() * this.height,
+                size: Math.random() * 2,
+                opacity: Math.random()
+            });
+        }
+    }
+
+    startLevel(planetKey) {
+        this.planet = PLANETS[planetKey];
+        this.state = 'PLAYING';
+        
+        // UI Updates
+        document.getElementById('main-menu').classList.add('hidden');
+        document.getElementById('controls-area').classList.remove('hidden');
+        document.getElementById('controls-area').classList.add('flex');
+        document.getElementById('flight-hud').classList.remove('hidden');
+        document.getElementById('flight-hud').classList.add('flex');
+        document.getElementById('result-modal').classList.add('hidden');
+
+        // Update Badge
+        const badge = document.getElementById('planet-badge');
+        badge.innerText = this.planet.name;
+        badge.style.backgroundColor = this.planet.color;
+        document.getElementById('gravity-readout').innerText = `g = ${this.planet.gravity} m/s²`;
+        
+        this.updateHUD(); // Ensure credits are visible
+
+        // Reset Physics
+        this.generateTerrain();
+        
+        // Ship Spawn (Top Center)
+        this.ship = {
+            x: this.width / 2,
+            y: 100,
+            vx: 0,
+            vy: 0,
+            angle: -Math.PI / 2, // Pointing up
+            fuel: 100,
+            radius: 15,
+            crashed: false,
+            landed: false
+        };
+
+        this.particles = [];
+        this.lastTime = performance.now();
+    }
+
+    generateTerrain() {
+        this.terrain = [];
+        let segments = 30; // Number of ground segments
+        let segmentWidth = this.width / segments;
+        
+        // Start high on edges, rough in middle
+        let currentHeight = this.height - 100;
+        
+        // Pick a landing spot index (roughly middle third)
+        let padIndex = Math.floor(segments/3) + Math.floor(Math.random() * (segments/3));
+        
+        for(let i=0; i<=segments; i++) {
+            let x = i * segmentWidth;
+            let y;
+
+            if (i === padIndex || i === padIndex + 1) {
+                // Flat landing pad
+                y = this.height - 100; 
+                if (i === padIndex) {
+                    this.landingPad = { x: x, y: y, width: segmentWidth };
+                }
+            } else {
+                // Random terrain
+                let roughness = 80;
+                y = (this.height - 100) - (Math.random() * roughness) + (Math.random() * roughness/2);
+            }
+            this.terrain.push({x, y});
+        }
+        
+        // Close the loop for filling
+        this.terrain.push({x: this.width, y: this.height});
+        this.terrain.push({x: 0, y: this.height});
+    }
+
+    resetLevel() {
+        // Find current planet key
+        let key = Object.keys(PLANETS).find(k => PLANETS[k] === this.planet) || 'earth';
+        this.startLevel(key);
+    }
+
+    showMenu() {
+        this.state = 'MENU';
+        document.getElementById('main-menu').classList.remove('hidden');
+        document.getElementById('controls-area').classList.add('hidden');
+        document.getElementById('flight-hud').classList.add('hidden');
+        document.getElementById('result-modal').classList.add('hidden');
+    }
+
+    update(dt) {
+        if(this.state !== 'PLAYING') return;
+
+        const s = this.ship;
+        const gravity = this.planet.gravity * 20; // Scale for pixel physics
+
+        // 1. Controls
+        if(!s.crashed && !s.landed) {
+            // Rotation
+            if(this.keys.ArrowLeft) s.angle -= 4 * dt;
+            if(this.keys.ArrowRight) s.angle += 4 * dt;
+
+            // Thrust
+            if(this.keys.ArrowUp && s.fuel > 0) {
+                const thrustPower = 500; // Consistent power, gravity makes it feel different
+                s.vx += Math.cos(s.angle) * thrustPower * dt;
+                s.vy += Math.sin(s.angle) * thrustPower * dt;
+                s.fuel -= 20 * dt; // Burn rate
+
+                // Add exhaust particles
+                for(let i=0; i<3; i++) {
+                    this.particles.push({
+                        x: s.x - Math.cos(s.angle) * s.radius,
+                        y: s.y - Math.sin(s.angle) * s.radius,
+                        vx: s.vx - Math.cos(s.angle) * 100 + (Math.random()-0.5)*50,
+                        vy: s.vy - Math.sin(s.angle) * 100 + (Math.random()-0.5)*50,
+                        life: 0.5,
+                        color: `rgba(255, ${Math.floor(Math.random()*200)+55}, 0, 1)`
+                    });
+                }
+            }
+        }
+
+        // 2. Physics
+        if(!s.crashed && !s.landed) {
+            s.vy += gravity * dt; // Apply Gravity
+            
+            s.x += s.vx * dt;
+            s.y += s.vy * dt;
+
+            // Screen wrapping (X only)
+            if(s.x > this.width) s.x = 0;
+            if(s.x < 0) s.x = this.width;
+        }
+
+        // 3. Collision Detection
+        this.checkCollision();
+
+        // 4. Update Particles
+        for(let i=this.particles.length-1; i>=0; i--) {
+            let p = this.particles[i];
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+            p.life -= dt;
+            if(p.life <= 0) this.particles.splice(i, 1);
+        }
+
+        // 5. Update HUD
+        document.getElementById('hud-alt').innerText = Math.max(0, Math.floor(this.landingPad.y - s.y - s.radius));
+        document.getElementById('hud-vel').innerText = Math.floor(Math.sqrt(s.vx**2 + s.vy**2));
+        document.getElementById('hud-fuel').innerText = Math.floor(s.fuel);
+    }
+
+    checkCollision() {
+        const s = this.ship;
+        if(s.crashed || s.landed) return;
+
+        // Simple Ground Check: Is ship below the terrain at its X coordinate?
+        // We iterate line segments
+        for(let i=0; i<this.terrain.length-3; i++) {
+            let p1 = this.terrain[i];
+            let p2 = this.terrain[i+1];
+
+            // Check if ship is within X range of this segment
+            if(s.x >= p1.x && s.x <= p2.x) {
+                // Linear interpolation to find ground height at ship X
+                let t = (s.x - p1.x) / (p2.x - p1.x);
+                let groundY = p1.y + t * (p2.y - p1.y);
+
+                if(s.y + s.radius >= groundY) {
+                    // Collision happened. Check if it's the pad or death.
+                    
+                    // Is it the landing pad?
+                    const isPad = (s.x > this.landingPad.x && s.x < this.landingPad.x + this.landingPad.width);
+                    
+                    // Stats checks
+                    const totalVel = Math.sqrt(s.vx**2 + s.vy**2);
+                    const safeSpeed = 60; // Max pixels/sec
+                    const rotation = (s.angle * 180 / Math.PI) % 360;
+                    const upright = (rotation > 250 && rotation < 290) || (rotation > -110 && rotation < -70);
+
+                    if(isPad && totalVel < safeSpeed && upright) {
+                        this.endGame(true);
+                    } else {
+                        this.endGame(false, isPad ? "Too fast or bad angle!" : "Hit terrain!");
+                    }
+                }
+            }
+        }
+    }
+
+    endGame(success, reason) {
+        this.ship.vx = 0;
+        this.ship.vy = 0;
+        if(success) {
+            this.ship.landed = true;
+            
+            // Calculate Reward
+            const baseReward = this.planet.reward || 100;
+            const fuelBonus = Math.floor(this.ship.fuel);
+            const total = baseReward + fuelBonus;
+            this.credits += total;
+            this.updateShopUI(); // Save state to shop
+
+            this.showResult(true, "PERFECT LANDING", `You mastered ${this.planet.name}! Earned ${total} Credits.`);
+        } else {
+            this.ship.crashed = true;
+            // Explosion particles
+            for(let k=0; k<30; k++) {
+                this.particles.push({
+                    x: this.ship.x,
+                    y: this.ship.y,
+                    vx: (Math.random()-0.5)*400,
+                    vy: (Math.random()-0.5)*400,
+                    life: 1.0,
+                    color: 'orange'
+                });
+            }
+            this.showResult(false, "CRASHED", reason || "Hull integrity critical.");
+        }
+    }
+
+    showResult(success, title, msg) {
+        const modal = document.getElementById('result-modal');
+        const icon = document.getElementById('result-icon');
+        const tit = document.getElementById('result-title');
+        const mes = document.getElementById('result-message');
+        const fact = document.getElementById('result-fact');
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.getElementById('controls-area').classList.add('hidden');
+
+        icon.innerHTML = success ? "🚀" : "💥";
+        tit.innerText = title;
+        tit.className = success ? "text-3xl font-bold text-emerald-400 mb-2" : "text-3xl font-bold text-red-500 mb-2";
+        mes.innerText = msg;
+        
+        // Find planet key
+        let key = Object.keys(PLANETS).find(k => PLANETS[k] === this.planet);
+        fact.innerText = FACTS[key];
+    }
+
+    draw() {
+        // Clear
+        this.ctx.fillStyle = this.planet.atmosphere ? '#0f172a' : '#000000'; // Space color
+        this.ctx.fillRect(0,0,this.width, this.height);
+
+        // Draw Stars (if visible)
+        if(this.planet.stars || this.state === 'MENU') {
+            this.ctx.fillStyle = 'white';
+            this.stars.forEach(star => {
+                this.ctx.globalAlpha = star.opacity;
+                this.ctx.beginPath();
+                this.ctx.arc(star.x, star.y, star.size, 0, Math.PI*2);
+                this.ctx.fill();
+            });
+            this.ctx.globalAlpha = 1;
+        }
+
+        // Draw Atmosphere Haze (if atmosphere exists)
+        if(this.planet.atmosphere) {
+            let grad = this.ctx.createLinearGradient(0, 0, 0, this.height);
+            grad.addColorStop(0, 'rgba(0,0,0,0)');
+            grad.addColorStop(1, this.planet.color + '22'); // faint glow at bottom
+            this.ctx.fillStyle = grad;
+            this.ctx.fillRect(0,0,this.width, this.height);
+        }
+
+        if(this.state === 'MENU') return; // Don't draw game objects in menu
+
+        // Draw Terrain
+        this.ctx.beginPath();
+        this.ctx.moveTo(0, this.height);
+        this.terrain.forEach(p => this.ctx.lineTo(p.x, p.y));
+        this.ctx.fillStyle = this.planet.terrainColor;
+        this.ctx.fill();
+        this.ctx.strokeStyle = this.planet.color;
+        this.ctx.lineWidth = 2;
+        this.ctx.stroke();
+
+        // Draw Landing Pad
+        if(this.landingPad) {
+            this.ctx.fillStyle = '#22c55e'; // Green
+            this.ctx.fillRect(this.landingPad.x, this.landingPad.y, this.landingPad.width, 10);
+            // Flashing lights
+            if(Date.now() % 1000 < 500) {
+                 this.ctx.fillStyle = '#4ade80';
+                 this.ctx.fillRect(this.landingPad.x + 5, this.landingPad.y + 2, 5, 5);
+                 this.ctx.fillRect(this.landingPad.x + this.landingPad.width - 10, this.landingPad.y + 2, 5, 5);
+            }
+        }
+
+        // Draw Particles
+        this.particles.forEach(p => {
+            this.ctx.fillStyle = p.color;
+            this.ctx.globalAlpha = p.life;
+            this.ctx.beginPath();
+            this.ctx.arc(p.x, p.y, 3, 0, Math.PI*2);
+            this.ctx.fill();
+        });
+        this.ctx.globalAlpha = 1;
+
+        // Draw Ship
+        const s = this.ship;
+        if(s && !s.crashed) {
+            this.ctx.save();
+            this.ctx.translate(s.x, s.y);
+            this.ctx.rotate(s.angle + Math.PI/2); // Adjust for drawing upright
+
+            // Get Current Skin
+            const skin = SHIPS.find(x => x.id === this.currentShipId) || SHIPS[0];
+
+            // Ship Body
+            this.ctx.fillStyle = skin.color;
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, -15);
+            this.ctx.lineTo(10, 10);
+            this.ctx.lineTo(-10, 10);
+            this.ctx.closePath();
+            this.ctx.fill();
+
+            // Cockpit
+            this.ctx.fillStyle = skin.accent;
+            this.ctx.beginPath();
+            this.ctx.arc(0, -5, 4, 0, Math.PI*2);
+            this.ctx.fill();
+
+            // Legs
+            this.ctx.strokeStyle = '#94a3b8';
+            this.ctx.lineWidth = 2;
+            this.ctx.beginPath();
+            this.ctx.moveTo(-10, 10);
+            this.ctx.lineTo(-12, 18);
+            this.ctx.moveTo(10, 10);
+            this.ctx.lineTo(12, 18);
+            this.ctx.stroke();
+
+            this.ctx.restore();
+        }
+    }
+
+    loop(timestamp) {
+        let dt = (timestamp - this.lastTime) / 1000;
+        this.lastTime = timestamp;
+        
+        // Cap dt to prevent physics explosions on lag
+        if(dt > 0.1) dt = 0.1;
+
+        this.update(dt);
+        this.draw();
+
+        requestAnimationFrame((t) => this.loop(t));
+    }
+}
+
+// Start Game
+const game = new Game();
+
+</script>
+</body>
+</html>

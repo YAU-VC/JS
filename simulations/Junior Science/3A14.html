@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Valtorta College: Interstellar Gravity Lab</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@300;400;700&display=swap');
+        
+        body {
+            font-family: 'Roboto', sans-serif;
+        }
+        
+        h1, h2, .digital-font {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        /* Custom Animations */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .planet-btn.active {
+            border-color: #fbbf24; /* Amber-400 */
+            box-shadow: 0 0 15px rgba(251, 191, 36, 0.5);
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white h-screen flex flex-col overflow-hidden">
+
+    <!-- Header -->
+    <header class="bg-gray-800 border-b border-gray-700 p-4 flex justify-between items-center z-10 shadow-lg">
+        <div class="flex items-center gap-3">
+            <div class="text-3xl">🪐</div>
+            <div>
+                <h1 class="text-xl font-bold text-blue-400 tracking-wider">VALTORTA COLLEGE: INTERSTELLAR <span class="text-white">OLYMPICS</span></h1>
+                <p class="text-xs text-gray-400">S2 Science: Force & Gravity Simulator</p>
+            </div>
+        </div>
+        <div class="hidden md:block text-sm text-gray-400">
+            <span class="mr-4">Status: <span class="text-green-400">Online</span></span>
+            <span>Simulating: <span id="current-planet-display" class="text-blue-300 font-bold">Earth</span></span>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col md:flex-row h-full">
+        
+        <!-- Controls Sidebar -->
+        <aside class="w-full md:w-80 bg-gray-800 p-6 flex flex-col gap-6 border-r border-gray-700 overflow-y-auto z-10 shadow-xl">
+            
+            <!-- Planet Selection -->
+            <div class="space-y-3">
+                <h2 class="text-sm uppercase tracking-widest text-gray-500 font-bold">Select Location</h2>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="setPlanet('earth')" id="btn-earth" class="planet-btn active bg-gray-700 hover:bg-gray-600 p-3 rounded-lg border-2 border-transparent transition-all flex flex-col items-center">
+                        <span class="text-2xl mb-1">🌍</span>
+                        <span class="font-bold text-sm">Earth</span>
+                        <span class="text-xs text-gray-400">9.81 m/s²</span>
+                    </button>
+                    <button onclick="setPlanet('moon')" id="btn-moon" class="planet-btn bg-gray-700 hover:bg-gray-600 p-3 rounded-lg border-2 border-transparent transition-all flex flex-col items-center">
+                        <span class="text-2xl mb-1">🌑</span>
+                        <span class="font-bold text-sm">Moon</span>
+                        <span class="text-xs text-gray-400">1.62 m/s²</span>
+                    </button>
+                    <button onclick="setPlanet('mars')" id="btn-mars" class="planet-btn bg-gray-700 hover:bg-gray-600 p-3 rounded-lg border-2 border-transparent transition-all flex flex-col items-center">
+                        <span class="text-2xl mb-1">🔴</span>
+                        <span class="font-bold text-sm">Mars</span>
+                        <span class="text-xs text-gray-400">3.72 m/s²</span>
+                    </button>
+                    <button onclick="setPlanet('jupiter')" id="btn-jupiter" class="planet-btn bg-gray-700 hover:bg-gray-600 p-3 rounded-lg border-2 border-transparent transition-all flex flex-col items-center">
+                        <span class="text-2xl mb-1">🌪️</span>
+                        <span class="font-bold text-sm">Jupiter</span>
+                        <span class="text-xs text-gray-400">24.79 m/s²</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Experiment Mode -->
+            <div class="space-y-3">
+                <h2 class="text-sm uppercase tracking-widest text-gray-500 font-bold">Experiment Mode</h2>
+                <select id="mode-select" onchange="setMode(this.value)" class="w-full bg-gray-900 border border-gray-600 text-white rounded p-3 focus:outline-none focus:border-blue-500">
+                    <option value="drop">⬇️ Free Fall Drop</option>
+                    <option value="jump">⬆️ Vertical Jump</option>
+                </select>
+                <p class="text-xs text-gray-400 italic" id="mode-desc">
+                    Drop an object from 10 meters to measure fall time.
+                </p>
+            </div>
+
+            <!-- Object Mass (Just for Weight Calculation) -->
+            <div class="space-y-3">
+                <h2 class="text-sm uppercase tracking-widest text-gray-500 font-bold">Object Mass</h2>
+                <div class="flex items-center gap-3">
+                    <input type="range" id="mass-slider" min="1" max="100" value="10" class="flex-1 accent-blue-500 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer">
+                    <span class="bg-gray-900 px-3 py-1 rounded border border-gray-600 digital-font text-blue-300 w-16 text-center" id="mass-display">10 kg</span>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="mt-auto space-y-3">
+                <button onclick="startSimulation()" id="start-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-lg shadow-lg transform active:scale-95 transition-all text-lg tracking-wider">
+                    START TEST
+                </button>
+                <button onclick="resetSimulation()" class="w-full bg-gray-700 hover:bg-gray-600 text-gray-300 font-bold py-2 rounded-lg transition-all">
+                    RESET
+                </button>
+            </div>
+        </aside>
+
+        <!-- Simulation Viewport -->
+        <section class="flex-1 relative bg-black overflow-hidden flex flex-col">
+            
+            <!-- Canvas Layer -->
+            <canvas id="simCanvas" class="absolute top-0 left-0 w-full h-full z-0"></canvas>
+
+            <!-- Data Overlay (HUD) -->
+            <div class="absolute top-4 left-4 z-10 flex flex-col gap-2 pointer-events-none">
+                <div class="bg-black/70 backdrop-blur-sm border-l-4 border-blue-500 p-3 rounded text-sm w-48 shadow-lg">
+                    <span class="text-gray-400 text-xs uppercase">Gravity (g)</span>
+                    <div class="text-2xl font-bold digital-font text-white"><span id="hud-gravity">9.81</span> <span class="text-sm">m/s²</span></div>
+                </div>
+                <div class="bg-black/70 backdrop-blur-sm border-l-4 border-yellow-500 p-3 rounded text-sm w-48 shadow-lg">
+                    <span class="text-gray-400 text-xs uppercase">Weight (W = mg)</span>
+                    <div class="text-2xl font-bold digital-font text-yellow-300"><span id="hud-weight">98.1</span> <span class="text-sm">N</span></div>
+                </div>
+            </div>
+
+            <!-- Timer Overlay -->
+            <div class="absolute top-4 right-4 z-10 pointer-events-none">
+                <div class="bg-black/70 backdrop-blur-sm border border-gray-600 p-4 rounded-lg shadow-lg text-center min-w-[150px]">
+                    <span class="text-gray-400 text-xs uppercase tracking-widest">Stopwatch</span>
+                    <div class="text-4xl font-bold digital-font text-green-400 mt-1" id="timer">0.00s</div>
+                </div>
+            </div>
+
+            <!-- Results Modal (Hidden by default) -->
+            <div id="result-modal" class="hidden absolute inset-0 bg-black/80 flex items-center justify-center z-50 fade-in backdrop-blur-sm">
+                <div class="bg-gray-800 border-2 border-blue-500 p-8 rounded-2xl max-w-md text-center shadow-[0_0_50px_rgba(59,130,246,0.5)]">
+                    <h3 class="text-2xl font-bold text-white mb-2 font-[Orbitron]">TEST COMPLETE</h3>
+                    <div class="w-full h-px bg-gray-600 my-4"></div>
+                    <div class="grid grid-cols-2 gap-4 text-left mb-6">
+                        <div>
+                            <p class="text-gray-400 text-xs">PLANET</p>
+                            <p class="text-lg font-bold text-blue-300" id="res-planet">Earth</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-400 text-xs">GRAVITY</p>
+                            <p class="text-lg font-bold text-white" id="res-gravity">9.81 m/s²</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-400 text-xs" id="res-metric-label">TIME</p>
+                            <p class="text-2xl font-bold text-yellow-400 digital-font" id="res-value">0.00s</p>
+                        </div>
+                         <div>
+                            <p class="text-gray-400 text-xs">WEIGHT</p>
+                            <p class="text-xl font-bold text-white digital-font" id="res-weight">98 N</p>
+                        </div>
+                    </div>
+                    <button onclick="document.getElementById('result-modal').classList.add('hidden')" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-full font-bold transition-all">
+                        Continue
+                    </button>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <script>
+        // --- Configuration & State ---
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let animationId;
+        let isRunning = false;
+        let timeElapsed = 0;
+        
+        // Physics Constants
+        const PLANETS = {
+            earth: { name: 'Earth', g: 9.81, color: '#1a3c5e', ground: '#4ade80', sky: ['#0f172a', '#1e3a8a'] },
+            moon: { name: 'Moon', g: 1.62, color: '#334155', ground: '#94a3b8', sky: ['#000000', '#1e293b'] },
+            mars: { name: 'Mars', g: 3.72, color: '#7f1d1d', ground: '#ef4444', sky: ['#450a0a', '#7f1d1d'] },
+            jupiter: { name: 'Jupiter', g: 24.79, color: '#78350f', ground: '#d97706', sky: ['#451a03', '#92400e'] }
+        };
+
+        let state = {
+            planet: 'earth',
+            mode: 'drop', // 'drop' or 'jump'
+            mass: 10,
+            y: 0,         // Position (meters)
+            v: 0,         // Velocity (m/s)
+            scale: 40,    // Pixels per meter
+            objectY: 0,   // Canvas Y position
+            groundY: 0    // Canvas Ground Y position
+        };
+
+        // --- Initialization ---
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.offsetWidth;
+            canvas.height = canvas.parentElement.offsetHeight;
+            state.groundY = canvas.height - 50;
+            drawScene();
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        // --- Control Functions ---
+        function setPlanet(planetKey) {
+            if (isRunning) return;
+            
+            // Update UI State
+            state.planet = planetKey;
+            document.querySelectorAll('.planet-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`btn-${planetKey}`).classList.add('active');
+            
+            // Update Display Texts
+            const p = PLANETS[planetKey];
+            document.getElementById('current-planet-display').innerText = p.name;
+            document.getElementById('hud-gravity').innerText = p.g.toFixed(2);
+            updateWeight();
+            
+            drawScene();
+        }
+
+        function setMode(mode) {
+            if (isRunning) return;
+            state.mode = mode;
+            
+            const desc = mode === 'drop' 
+                ? "Drop an object from 10 meters to measure fall time." 
+                : "Launch an object upward at 10 m/s to see how high it goes.";
+            
+            document.getElementById('mode-desc').innerText = desc;
+            resetSimulation();
+        }
+
+        // Mass Slider Listener
+        document.getElementById('mass-slider').addEventListener('input', (e) => {
+            state.mass = parseInt(e.target.value);
+            document.getElementById('mass-display').innerText = state.mass + ' kg';
+            updateWeight();
+        });
+
+        function updateWeight() {
+            const g = PLANETS[state.planet].g;
+            const w = (state.mass * g).toFixed(1);
+            document.getElementById('hud-weight').innerText = w;
+        }
+
+        // --- Physics Engine ---
+        function resetSimulation() {
+            isRunning = false;
+            cancelAnimationFrame(animationId);
+            timeElapsed = 0;
+            state.v = 0;
+            document.getElementById('timer').innerText = "0.00s";
+            document.getElementById('result-modal').classList.add('hidden');
+            document.getElementById('start-btn').innerText = "START TEST";
+            document.getElementById('start-btn').classList.remove('bg-red-600', 'hover:bg-red-500');
+            document.getElementById('start-btn').classList.add('bg-blue-600', 'hover:bg-blue-500');
+
+            if (state.mode === 'drop') {
+                state.y = 10; // Start at 10m height
+            } else {
+                state.y = 0; // Start at ground
+                state.v = 10; // Initial jump velocity 10 m/s
+            }
+            
+            drawScene();
+        }
+
+        function startSimulation() {
+            if (isRunning) {
+                resetSimulation();
+                return;
+            }
+
+            isRunning = true;
+            const btn = document.getElementById('start-btn');
+            btn.innerText = "STOP / RESET";
+            btn.classList.remove('bg-blue-600', 'hover:bg-blue-500');
+            btn.classList.add('bg-red-600', 'hover:bg-red-500');
+
+            let lastTime = performance.now();
+            
+            // Set initial conditions based on mode
+            if (state.mode === 'drop') {
+                state.y = 10;
+                state.v = 0;
+            } else {
+                state.y = 0;
+                state.v = 10; // Jump force
+            }
+
+            function loop(currentTime) {
+                if (!isRunning) return;
+
+                const dt = (currentTime - lastTime) / 1000; // Delta time in seconds
+                lastTime = currentTime;
+
+                // Physics Step
+                // v = v0 + at (a is -g)
+                // y = y0 + vt
+                
+                const g = PLANETS[state.planet].g;
+
+                if (state.mode === 'drop') {
+                    // Free fall: Velocity increases downwards
+                    state.v += g * dt;
+                    state.y -= state.v * dt;
+
+                    // Hit Ground check
+                    if (state.y <= 0) {
+                        state.y = 0;
+                        finishSimulation();
+                        drawScene();
+                        return;
+                    }
+                } else {
+                    // Jump: Velocity decreases due to gravity
+                    state.v -= g * dt;
+                    state.y += state.v * dt;
+
+                    // Landed check (only if we've gone up first)
+                    if (state.y <= 0 && timeElapsed > 0.1) {
+                        state.y = 0;
+                        finishSimulation();
+                        drawScene();
+                        return;
+                    }
+                }
+
+                timeElapsed += dt;
+                document.getElementById('timer').innerText = timeElapsed.toFixed(2) + 's';
+                
+                drawScene();
+                animationId = requestAnimationFrame(loop);
+            }
+
+            animationId = requestAnimationFrame(loop);
+        }
+
+        function finishSimulation() {
+            isRunning = false;
+            const p = PLANETS[state.planet];
+            
+            // Populate Results
+            document.getElementById('res-planet').innerText = p.name;
+            document.getElementById('res-gravity').innerText = p.g + ' m/s²';
+            document.getElementById('res-weight').innerText = (state.mass * p.g).toFixed(1) + ' N';
+            
+            if (state.mode === 'drop') {
+                document.getElementById('res-metric-label').innerText = "FALL TIME";
+                document.getElementById('res-value').innerText = timeElapsed.toFixed(2) + 's';
+            } else {
+                // For jump, we show the total air time, or maybe max height?
+                // Let's keep Time as the primary metric for consistency with the prompt's observation focus
+                document.getElementById('res-metric-label').innerText = "AIR TIME";
+                document.getElementById('res-value').innerText = timeElapsed.toFixed(2) + 's';
+            }
+            
+            document.getElementById('result-modal').classList.remove('hidden');
+        }
+
+        // --- Rendering ---
+        function drawScene() {
+            // Clear
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const p = PLANETS[state.planet];
+            
+            // 1. Draw Sky (Gradient)
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, p.sky[0]);
+            gradient.addColorStop(1, p.sky[1]);
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 2. Draw Stars (if not Earth, or if Earth is dark)
+            if (state.planet !== 'earth') {
+                ctx.fillStyle = 'white';
+                for(let i=0; i<50; i++) {
+                    // Simple random seeded visuals or just random frames (static here for performance)
+                    // We'll just use a pseudo-random distribution based on i
+                    const x = (Math.sin(i * 123) * 0.5 + 0.5) * canvas.width;
+                    const y = (Math.cos(i * 321) * 0.5 + 0.5) * canvas.height * 0.8;
+                    ctx.beginPath();
+                    ctx.arc(x, y, Math.random() > 0.9 ? 1.5 : 1, 0, Math.PI*2);
+                    ctx.fill();
+                }
+            }
+
+            // 3. Draw Ground
+            ctx.fillStyle = p.ground;
+            ctx.fillRect(0, state.groundY, canvas.width, canvas.height - state.groundY);
+            
+            // Ground Grid/Details
+            ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+            ctx.beginPath();
+            for (let i=0; i<canvas.width; i+=50) {
+                ctx.moveTo(i, state.groundY);
+                ctx.lineTo(i - 20, canvas.height);
+            }
+            ctx.stroke();
+
+            // 4. Draw Ruler/Scale Background
+            ctx.fillStyle = 'rgba(255,255,255,0.1)';
+            ctx.fillRect(canvas.width/2 - 100, 50, 200, state.groundY - 50);
+            
+            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            ctx.font = '12px Roboto';
+            ctx.textAlign = 'right';
+            
+            // Draw meter markers
+            // We want to visualize 10 meters height comfortably
+            // Canvas height usable area approx 500px. 10m = 400px? => 40px/m
+            const metersToPixels = (state.groundY - 100) / 12; // Allow some headroom
+            
+            for (let m = 0; m <= 12; m++) {
+                const yPos = state.groundY - (m * metersToPixels);
+                ctx.fillRect(canvas.width/2 - 20, yPos, 40, 1); // Main tick
+                ctx.fillText(m + 'm', canvas.width/2 - 30, yPos + 4);
+            }
+
+            // 5. Draw Object
+            const objY = state.groundY - (state.y * metersToPixels) - 20; // -20 for radius
+            const objX = canvas.width / 2;
+
+            ctx.save();
+            ctx.translate(objX, objY);
+            
+            // Shadow
+            if (state.y > 0) {
+                const shadowScale = 1 - (state.y / 15);
+                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                ctx.beginPath();
+                // Shadow is drawn relative to object but projected to ground
+                // Actually easier to draw shadow separately on ground
+            }
+
+            // Draw Ball
+            ctx.beginPath();
+            ctx.arc(0, 0, 20, 0, Math.PI * 2);
+            ctx.fillStyle = '#60a5fa'; // Blue-400
+            ctx.fill();
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Shine
+            ctx.beginPath();
+            ctx.arc(-8, -8, 6, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255,255,255,0.3)';
+            ctx.fill();
+            
+            ctx.restore();
+            
+            // Draw Dynamic Shadow on ground
+            const shadowRadius = 20 * (1 - Math.min(state.y/20, 0.8));
+            const shadowAlpha = 0.5 * (1 - Math.min(state.y/10, 0.9));
+            ctx.fillStyle = `rgba(0,0,0,${shadowAlpha})`;
+            ctx.beginPath();
+            ctx.ellipse(objX, state.groundY + 5, shadowRadius, shadowRadius * 0.3, 0, 0, Math.PI*2);
+            ctx.fill();
+
+            // 6. Draw Text info next to object
+            if (isRunning) {
+                ctx.fillStyle = 'white';
+                ctx.font = '14px Roboto';
+                ctx.textAlign = 'left';
+                ctx.fillText(`h: ${state.y.toFixed(2)}m`, objX + 30, objY);
+                ctx.fillText(`v: ${Math.abs(state.v).toFixed(1)}m/s`, objX + 30, objY + 20);
+            }
+        }
+
+        // Start
+        resizeCanvas();
+        updateWeight();
+        resetSimulation();
+
+    </script>
+</body>
+</html>
