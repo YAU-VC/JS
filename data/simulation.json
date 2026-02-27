@@ -43,28 +43,7 @@
         "createdAt": "2026-2-4",
         "updatedAt": "2026-2-4"
     },
-    {
-        "id": "Reflection",
-        "category": {
-            "en-US": "Junior Science",
-            "zh-HK": "Junior Science"
-        },
-        "title": {
-            "en-US": "Reflection of light",
-            "zh-HK": "Reflection of light"
-        },
-        "description": {
-            "en-US": "Reflection of light",
-            "zh-HK": "Reflection of light"
-        },
-        "contributors": [
-            "CHOW PUI HAN"
-        ],
-        "simulationUrl": "simulations/Junior Science/3B10.html",
-        "screenshotUrl": "screenshots/3B10.png",
-        "createdAt": "2026-2-4",
-        "updatedAt": "2026-2-4"
-    },
+   
     {
         "id": "Syringe",
         "category": {
@@ -295,3 +274,4 @@
 
 
 ] 
+
