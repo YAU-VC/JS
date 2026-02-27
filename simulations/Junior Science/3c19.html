@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Valtorta College Gravity Golf</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --text-color: #e2e8f0;
+            --accent-color: #38bdf8;
+            --danger-color: #ef4444;
+            --success-color: #22c55e;
+            --ui-panel-bg: rgba(15, 23, 42, 0.85);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            touch-action: none; /* Prevent pull-to-refresh on mobile */
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .hud-panel {
+            padding: 20px;
+            pointer-events: auto;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .stats-box {
+            background: var(--ui-panel-bg);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(8px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            min-width: 120px;
+        }
+
+        h1 {
+            margin: 0 0 5px 0;
+            font-size: 1.2rem;
+            color: var(--accent-color);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        p {
+            margin: 5px 0;
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        button {
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px solid var(--accent-color);
+            color: var(--accent-color);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            pointer-events: auto;
+            font-size: 0.9rem;
+        }
+
+        button:hover {
+            background: var(--accent-color);
+            color: var(--bg-color);
+        }
+
+        button.secondary {
+            border-color: rgba(255, 255, 255, 0.3);
+            color: rgba(255, 255, 255, 0.8);
+            background: transparent;
+        }
+
+        button.secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        #level-indicator {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--ui-panel-bg);
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(4px);
+        }
+
+        #message-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(15, 23, 42, 0.95);
+            padding: 40px;
+            border-radius: 16px;
+            text-align: center;
+            border: 1px solid var(--accent-color);
+            box-shadow: 0 0 30px rgba(56, 189, 248, 0.2);
+            display: none;
+            pointer-events: auto;
+            max-width: 90%;
+            width: 400px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        #message-title {
+            font-size: 2rem;
+            margin-bottom: 15px;
+            color: var(--accent-color);
+        }
+
+        #message-text {
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+
+        #tutorial-tooltip {
+            position: absolute;
+            background: var(--accent-color);
+            color: var(--bg-color);
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            pointer-events: none;
+            transform: translate(-50%, -150%);
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.5s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .arrow-down {
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0; 
+            height: 0; 
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 6px solid var(--accent-color);
+        }
+
+        /* Theory Modal Styles */
+        #theory-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.95);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            pointer-events: auto;
+        }
+
+        .theory-content {
+            background: var(--ui-panel-bg);
+            border: 1px solid var(--accent-color);
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 0 40px rgba(0,0,0,0.5);
+            color: var(--text-color);
+        }
+
+        .theory-content h2 {
+            color: var(--accent-color);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+
+        .theory-content h3 {
+            color: var(--success-color);
+            margin-bottom: 5px;
+        }
+        
+        .formula {
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+            margin: 15px 0;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            font-size: 1.2rem;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: transparent;
+            border: none;
+            color: var(--danger-color);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+        }
+        
+        .close-btn:hover {
+            background: transparent;
+            transform: scale(1.1);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -45%); }
+            to { opacity: 1; transform: translate(-50%, -50%); }
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 600px) {
+            .hud-panel { padding: 10px; }
+            .stats-box { width: auto; font-size: 0.8rem; }
+            h1 { font-size: 1rem; }
+            button { padding: 6px 12px; font-size: 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="gameCanvas"></canvas>
+    
+    <div id="tutorial-tooltip">
+        Drag & Release to Launch!
+        <div class="arrow-down"></div>
+    </div>
+
+    <div id="ui-layer">
+        <div class="top-bar hud-panel">
+            <div class="stats-box">
+                <h1>Valtorta College Gravity Golf</h1>
+                <p>Launch the probe into the wormhole.</p>
+                <div class="controls">
+                    <button id="reset-btn" class="secondary" onclick="game.resetLevel()">Reset Shot</button>
+                    <button id="toggle-field-btn" class="secondary" onclick="game.toggleGravityField()">Show Gravity</button>
+                    <button id="theory-btn" class="secondary" onclick="game.toggleTheory()">Theory</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="level-indicator">Level 1</div>
+    </div>
+
+    <!-- Theory Overlay -->
+    <div id="theory-overlay">
+        <div class="theory-content">
+            <button class="close-btn" onclick="game.toggleTheory()">×</button>
+            <h2>The Science of Gravity</h2>
+            <p>This game uses <strong>Newton's Law of Universal Gravitation</strong> to simulate movement.</p>
+            
+            <div class="formula">F = G × (M × m) / r²</div>
+            
+            <h3>How it Works</h3>
+            <ul>
+                <li><strong>Mass (M):</strong> Bigger planets pull harder.</li>
+                <li><strong>Distance (r²):</strong> Gravity gets much weaker as you move away. If you double the distance, gravity is <strong>4x weaker</strong>!</li>
+            </ul>
+
+            <h3>The Slingshot Effect</h3>
+            <p>By flying close to a planet without crashing, you can use its gravity to change direction and speed up without using fuel. Real space agencies use this "gravity assist" to send probes to Jupiter and Saturn!</p>
+            
+            <div style="text-align: center; margin-top: 20px;">
+                <button onclick="game.toggleTheory()">Got it!</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="message-overlay">
+        <h2 id="message-title">Level Complete!</h2>
+        <p id="message-text">Great shot. Ready for the next challenge?</p>
+        <button onclick="game.nextLevel()">Next Level</button>
+    </div>
+</div>
+
+<script>
+/**
+ * Game Configuration & Physics Constants
+ */
+const CONFIG = {
+    G: 0.8, // Gravitational constant (scaled for gameplay)
+    subSteps: 8, // Physics sub-steps for stability
+    dt: 0.5, // Time step
+    colors: {
+        ship: '#38bdf8',
+        trail: 'rgba(56, 189, 248, 0.4)',
+        planet: '#94a3b8',
+        target: '#22c55e',
+        targetGlow: 'rgba(34, 197, 94, 0.4)',
+        trajectory: 'rgba(255, 255, 255, 0.3)',
+        trajectoryBad: 'rgba(239, 68, 68, 0.5)',
+        danger: '#ef4444',
+        success: '#22c55e'
+    }
+};
+
+class Vector {
+    constructor(x, y) { this.x = x; this.y = y; }
+    add(v) { return new Vector(this.x + v.x, this.y + v.y); }
+    sub(v) { return new Vector(this.x - v.x, this.y - v.y); }
+    mult(n) { return new Vector(this.x * n, this.y * n); }
+    div(n) { return new Vector(this.x / n, this.y / n); }
+    mag() { return Math.sqrt(this.x * this.x + this.y * this.y); }
+    norm() { 
+        let m = this.mag(); 
+        return m > 0 ? this.div(m) : new Vector(0, 0); 
+    }
+    dist(v) { return this.sub(v).mag(); }
+    copy() { return new Vector(this.x, this.y); }
+}
+
+/**
+ * Game Entities
+ */
+class Planet {
+    constructor(x, y, mass, radius) {
+        this.pos = new Vector(x, y);
+        this.mass = mass;
+        this.radius = radius;
+        this.color = CONFIG.colors.planet;
+    }
+
+    draw(ctx) {
+        ctx.beginPath();
+        ctx.arc(this.pos.x, this.pos.y, this.radius, 0, Math.PI * 2);
+        const grad = ctx.createRadialGradient(this.pos.x, this.pos.y, this.radius * 0.3, this.pos.x, this.pos.y, this.radius);
+        grad.addColorStop(0, '#cbd5e1');
+        grad.addColorStop(1, '#475569');
+        ctx.fillStyle = grad;
+        ctx.fill();
+        
+        // Atmosphere glow
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = 'rgba(148, 163, 184, 0.2)';
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+    }
+}
+
+class Target {
+    constructor(x, y, radius) {
+        this.pos = new Vector(x, y);
+        this.radius = radius;
+        this.angle = 0;
+    }
+
+    update() {
+        this.angle += 0.02;
+    }
+
+    draw(ctx) {
+        // Outer glow
+        ctx.save();
+        ctx.translate(this.pos.x, this.pos.y);
+        ctx.rotate(this.angle);
+        
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius + 5, 0, Math.PI * 2);
+        ctx.strokeStyle = CONFIG.colors.target;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.stroke();
+        
+        // Inner swirl
+        ctx.rotate(-this.angle * 2);
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius - 2, 0, Math.PI * 2);
+        ctx.fillStyle = CONFIG.colors.targetGlow;
+        ctx.fill();
+        
+        ctx.restore();
+    }
+}
+
+class Ship {
+    constructor(x, y) {
+        this.startPos = new Vector(x, y);
+        this.pos = new Vector(x, y);
+        this.vel = new Vector(0, 0);
+        this.acc = new Vector(0, 0);
+        this.radius = 8;
+        this.isMoving = false;
+        this.trail = [];
+        this.crashed = false;
+        this.finished = false;
+    }
+
+    applyForce(force) {
+        this.acc = this.acc.add(force);
+    }
+
+    update(planets, target, width, height) {
+        if (!this.isMoving || this.crashed || this.finished) return;
+
+        // Physics Loop (Sub-stepping for accuracy)
+        for (let i = 0; i < CONFIG.subSteps; i++) {
+            this.acc = new Vector(0, 0);
+
+            // Gravity from planets
+            for (let planet of planets) {
+                let dir = planet.pos.sub(this.pos);
+                let dist = dir.mag();
+                // Collision check
+                if (dist < planet.radius + this.radius) {
+                    this.crash();
+                    return;
+                }
+                
+                // F = G * M / r^2
+                dir = dir.norm();
+                let forceMag = (CONFIG.G * planet.mass) / (dist * dist);
+                this.applyForce(dir.mult(forceMag));
+            }
+
+            // Target check
+            if (this.pos.dist(target.pos) < target.radius) {
+                this.win();
+                return;
+            }
+
+            // Integration
+            this.vel = this.vel.add(this.acc.mult(CONFIG.dt / CONFIG.subSteps));
+            this.pos = this.pos.add(this.vel.mult(CONFIG.dt / CONFIG.subSteps));
+        }
+
+        // Trail management
+        if (frameCount % 3 === 0) {
+            this.trail.push(this.pos.copy());
+            if (this.trail.length > 50) this.trail.shift();
+        }
+
+        // Out of bounds check - Fail if touching screen edge
+        if (this.pos.x - this.radius <= 0 || this.pos.x + this.radius >= width || 
+            this.pos.y - this.radius <= 0 || this.pos.y + this.radius >= height) {
+            this.crash();
+        }
+    }
+
+    launch(velocity) {
+        this.vel = velocity;
+        this.isMoving = true;
+        this.trail = [];
+    }
+
+    crash() {
+        this.crashed = true;
+        this.isMoving = false;
+        createExplosion(this.pos.x, this.pos.y, CONFIG.colors.danger);
+        setTimeout(() => game.resetLevel(), 1000);
+    }
+
+    win() {
+        this.finished = true;
+        this.isMoving = false;
+        createExplosion(this.pos.x, this.pos.y, CONFIG.colors.target);
+        setTimeout(() => game.showWinScreen(), 500);
+    }
+
+    reset() {
+        this.pos = this.startPos.copy();
+        this.vel = new Vector(0, 0);
+        this.acc = new Vector(0, 0);
+        this.isMoving = false;
+        this.crashed = false;
+        this.finished = false;
+        this.trail = [];
+    }
+
+    draw(ctx) {
+        // Draw Trail
+        if (this.trail.length > 1) {
+            ctx.beginPath();
+            ctx.moveTo(this.trail[0].x, this.trail[0].y);
+            for (let p of this.trail) ctx.lineTo(p.x, p.y);
+            ctx.strokeStyle = CONFIG.colors.trail;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        if (!this.crashed && !this.finished) {
+            ctx.beginPath();
+            ctx.arc(this.pos.x, this.pos.y, this.radius, 0, Math.PI * 2);
+            ctx.fillStyle = CONFIG.colors.ship;
+            ctx.fill();
+            
+            // Engine glow
+            if (this.isMoving) {
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = CONFIG.colors.ship;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+        }
+    }
+}
+
+class Particle {
+    constructor(x, y, color) {
+        this.pos = new Vector(x, y);
+        this.vel = new Vector((Math.random() - 0.5) * 5, (Math.random() - 0.5) * 5);
+        this.life = 1.0;
+        this.color = color || '#fff';
+    }
+    update() {
+        this.pos = this.pos.add(this.vel);
+        this.life -= 0.02;
+    }
+    draw(ctx) {
+        ctx.globalAlpha = this.life;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.pos.x, this.pos.y, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+    }
+}
+
+/**
+ * Game Manager
+ */
+class Game {
+    constructor() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.width = window.innerWidth;
+        this.height = window.innerHeight;
+        
+        this.planets = [];
+        this.ship = null;
+        this.target = null;
+        this.particles = [];
+        
+        this.level = 1;
+        this.isDragging = false;
+        this.dragStart = null;
+        this.dragCurrent = null;
+        this.showField = false;
+
+        // Resize handler
+        window.addEventListener('resize', () => this.resize());
+        this.resize();
+
+        // Input handlers
+        this.setupInputs();
+        
+        // Start loop
+        this.loadLevel(1);
+        this.loop = this.loop.bind(this);
+        requestAnimationFrame(this.loop);
+    }
+
+    resize() {
+        this.width = window.innerWidth;
+        this.height = window.innerHeight;
+        this.canvas.width = this.width;
+        this.canvas.height = this.height;
+        // Reload level to adjust positions relative to screen if needed
+        // For simplicity, we just keep absolute positions or could scale them
+        if(this.ship) this.ship.reset(); 
+    }
+
+    setupInputs() {
+        const startDrag = (x, y) => {
+            if (this.ship.isMoving) return;
+            // Check if clicking near ship
+            if (this.ship.pos.dist(new Vector(x, y)) < 50) {
+                this.isDragging = true;
+                this.dragStart = this.ship.pos.copy();
+                this.dragCurrent = new Vector(x, y);
+                // Hide tutorial
+                document.getElementById('tutorial-tooltip').style.opacity = '0';
+            }
+        };
+
+        const moveDrag = (x, y) => {
+            if (this.isDragging) {
+                this.dragCurrent = new Vector(x, y);
+            }
+        };
+
+        const endDrag = () => {
+            if (this.isDragging) {
+                this.isDragging = false;
+                const power = this.dragStart.sub(this.dragCurrent);
+                // Cap power
+                if (power.mag() > 200) power.norm().mult(200);
+                
+                // Launch multiplier
+                const launchVel = power.mult(0.15); 
+                this.ship.launch(launchVel);
+            }
+        };
+
+        // Mouse
+        this.canvas.addEventListener('mousedown', e => startDrag(e.clientX, e.clientY));
+        window.addEventListener('mousemove', e => moveDrag(e.clientX, e.clientY));
+        window.addEventListener('mouseup', endDrag);
+
+        // Touch
+        this.canvas.addEventListener('touchstart', e => {
+            e.preventDefault();
+            startDrag(e.touches[0].clientX, e.touches[0].clientY);
+        }, {passive: false});
+        window.addEventListener('touchmove', e => {
+            if(this.isDragging) e.preventDefault();
+            moveDrag(e.touches[0].clientX, e.touches[0].clientY);
+        }, {passive: false});
+        window.addEventListener('touchend', endDrag);
+    }
+
+    loadLevel(lvl) {
+        this.level = lvl;
+        this.planets = [];
+        this.particles = [];
+        document.getElementById('level-indicator').innerText = `Level ${lvl}`;
+        document.getElementById('message-overlay').style.display = 'none';
+
+        const cx = this.width / 2;
+        const cy = this.height / 2;
+
+        switch(lvl) {
+            case 1: // Introduction
+                this.ship = new Ship(cx - 300, cy);
+                this.target = new Target(cx + 300, cy, 25);
+                this.planets.push(new Planet(cx, cy + 100, 4000, 60));
+                this.showTutorial(this.ship.pos);
+                break;
+            case 2: // The Orbit
+                this.ship = new Ship(cx - 300, cy);
+                this.target = new Target(cx + 300, cy, 25);
+                // Large planet in middle
+                this.planets.push(new Planet(cx, cy, 6000, 80)); 
+                break;
+            case 3: // Binary System
+                this.ship = new Ship(cx - 350, cy);
+                this.target = new Target(cx + 350, cy, 25);
+                this.planets.push(new Planet(cx - 100, cy - 100, 3500, 50));
+                this.planets.push(new Planet(cx + 100, cy + 100, 3500, 50));
+                break;
+            case 4: // Slingshot
+                this.ship = new Ship(cx - 400, cy + 200);
+                this.target = new Target(cx + 400, cy - 200, 25);
+                this.planets.push(new Planet(cx, cy, 8000, 90));
+                this.planets.push(new Planet(cx - 300, cy - 150, 2000, 40));
+                break;
+            default:
+                // Random Generation for infinite play
+                this.ship = new Ship(100, this.height/2);
+                this.target = new Target(this.width - 100, this.height/2, 25);
+                const numPlanets = Math.floor(Math.random() * 3) + 2;
+                for(let i=0; i<numPlanets; i++) {
+                    const px = 200 + Math.random() * (this.width - 400);
+                    const py = 100 + Math.random() * (this.height - 200);
+                    const mass = 2000 + Math.random() * 4000;
+                    this.planets.push(new Planet(px, py, mass, 30 + mass/100));
+                }
+                break;
+        }
+        
+        // Ensure ship exists (safety)
+        if (!this.ship) this.ship = new Ship(100, 100);
+        this.ship.reset();
+    }
+
+    showTutorial(pos) {
+        const tip = document.getElementById('tutorial-tooltip');
+        tip.style.left = pos.x + 'px';
+        tip.style.top = (pos.y - 20) + 'px';
+        tip.style.opacity = '1';
+    }
+
+    toggleGravityField() {
+        this.showField = !this.showField;
+    }
+
+    toggleTheory() {
+        const overlay = document.getElementById('theory-overlay');
+        overlay.style.display = overlay.style.display === 'flex' ? 'none' : 'flex';
+    }
+
+    resetLevel() {
+        this.ship.reset();
+        this.particles = [];
+        if (this.level === 1) this.showTutorial(this.ship.pos);
+    }
+
+    nextLevel() {
+        this.loadLevel(this.level + 1);
+    }
+
+    showWinScreen() {
+        const overlay = document.getElementById('message-overlay');
+        const title = document.getElementById('message-title');
+        const text = document.getElementById('message-text');
+        
+        title.innerText = "Level Complete!";
+        title.style.color = CONFIG.colors.success;
+        text.innerText = "Great navigation, Commander.";
+        overlay.style.display = 'block';
+    }
+
+    drawGravityField() {
+        if (!this.showField) return;
+        
+        const spacing = 40;
+        this.ctx.strokeStyle = 'rgba(56, 189, 248, 0.1)';
+        this.ctx.lineWidth = 1;
+
+        for (let x = 0; x < this.width; x += spacing) {
+            for (let y = 0; y < this.height; y += spacing) {
+                // Calculate gravity vector at this point
+                let p = new Vector(x, y);
+                let force = new Vector(0, 0);
+                
+                for (let planet of this.planets) {
+                    let dir = planet.pos.sub(p);
+                    let distSq = dir.mag() * dir.mag();
+                    if (distSq < 100) distSq = 100; // Clamp
+                    let f = (CONFIG.G * planet.mass) / distSq;
+                    force = force.add(dir.norm().mult(f));
+                }
+                
+                // Draw vector
+                let len = force.mag() * 1000; // Scale for visual
+                if (len > spacing * 0.8) len = spacing * 0.8;
+                
+                this.ctx.beginPath();
+                this.ctx.moveTo(x, y);
+                let end = p.add(force.norm().mult(len));
+                this.ctx.lineTo(end.x, end.y);
+                this.ctx.stroke();
+                
+                // Dot
+                this.ctx.fillStyle = 'rgba(56, 189, 248, 0.2)';
+                this.ctx.fillRect(x-1, y-1, 2, 2);
+            }
+        }
+    }
+
+    drawTrajectoryPrediction() {
+        if (!this.isDragging) return;
+
+        // Calculate hypothetical path
+        let simPos = this.ship.pos.copy();
+        let simVel = this.dragStart.sub(this.dragCurrent).mult(0.15);
+        let simAcc = new Vector(0,0);
+        
+        this.ctx.beginPath();
+        this.ctx.moveTo(simPos.x, simPos.y);
+
+        for (let t = 0; t < 60; t++) { // Simulate 60 frames ahead
+             simAcc = new Vector(0, 0);
+             for (let planet of this.planets) {
+                let dir = planet.pos.sub(simPos);
+                let dist = dir.mag();
+                if (dist < planet.radius + 10) break; // Stop on hypothetical crash
+                let f = (CONFIG.G * planet.mass) / (dist * dist);
+                simAcc = simAcc.add(dir.norm().mult(f));
+             }
+             simVel = simVel.add(simAcc.mult(CONFIG.dt));
+             simPos = simPos.add(simVel.mult(CONFIG.dt));
+             this.ctx.lineTo(simPos.x, simPos.y);
+        }
+        
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        this.ctx.setLineDash([5, 5]);
+        this.ctx.stroke();
+        this.ctx.setLineDash([]);
+    }
+
+    loop() {
+        // Clear
+        this.ctx.clearRect(0, 0, this.width, this.height);
+
+        // Update
+        this.target.update();
+        this.ship.update(this.planets, this.target, this.width, this.height);
+        
+        // Particles
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            this.particles[i].update();
+            if (this.particles[i].life <= 0) this.particles.splice(i, 1);
+        }
+
+        // Draw Background Elements
+        this.drawGravityField();
+
+        // Draw Entities
+        this.target.draw(this.ctx);
+        for (let planet of this.planets) planet.draw(this.ctx);
+        this.ship.draw(this.ctx);
+        for (let p of this.particles) p.draw(this.ctx);
+
+        // UI Interactions
+        if (this.isDragging) {
+            // Draw drag line
+            this.ctx.beginPath();
+            this.ctx.moveTo(this.dragStart.x, this.dragStart.y);
+            this.ctx.lineTo(this.dragCurrent.x, this.dragCurrent.y);
+            this.ctx.strokeStyle = CONFIG.colors.ship;
+            this.ctx.lineWidth = 2;
+            this.ctx.stroke();
+
+            // Prediction
+            this.drawTrajectoryPrediction();
+        }
+
+        requestAnimationFrame(this.loop);
+    }
+}
+
+// Global helper for particles
+let frameCount = 0;
+function createExplosion(x, y, color) {
+    for (let i = 0; i < 20; i++) {
+        game.particles.push(new Particle(x, y, color));
+    }
+}
+
+// Start Game
+const game = new Game();
+
+// Helper to increment frame for trail logic
+(function anim() {
+    frameCount++;
+    requestAnimationFrame(anim);
+})();
+
+</script>
+</body>
+</html>
