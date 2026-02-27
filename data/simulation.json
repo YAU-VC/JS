@@ -199,28 +199,6 @@
     },
 
     {
-        "id": "GRAVITY2",
-        "category": {
-            "en-US": "Junior Science",
-            "zh-HK": "Junior Science"
-        },
-        "title": {
-            "en-US": "GRAVITY",
-            "zh-HK": "GRAVITY"
-        },
-        "description": {
-            "en-US": "Landing of ship",
-            "zh-HK": "Landing of ship"
-        },
-        "contributors": [
-            "LAW SHING HEI"
-        ],
-        "simulationUrl": "simulations/Junior Science/3B17.html",
-        "screenshotUrl": "screenshots/3B17.png",
-        "createdAt": "2026-2-4",
-        "updatedAt": "2026-2-4"
-    },
-    {
         "id": "GRAVITY3",
         "category": {
             "en-US": "Junior Science",
@@ -308,6 +286,7 @@
         "createdAt": "2026-2-4",
         "updatedAt": "2026-2-4"
     }
+
 
 
 
